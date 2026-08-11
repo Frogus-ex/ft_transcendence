@@ -1,0 +1,10 @@
+#For Dockerfiles
+
+# Installation needed:
+
+# FROM python latest version
+# pip
+# pip install websockets
+# pip install websocket_client
+# Copy the file 'ingest-test.py' somewhere to execute it
+# And then run the file with "python file.py"
