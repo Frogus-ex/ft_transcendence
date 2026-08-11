@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: transcendence_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    envirronnement:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    port:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      -postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD_SHELL", "pg-isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+    network:
+      -transcendence_net
+    
+volumes:
+  postgres_data:
+    driver: local
+network:
+  transcendence_net:
+    driver: bridge
