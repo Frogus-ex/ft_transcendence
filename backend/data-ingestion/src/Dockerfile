@@ -1,8 +1,9 @@
 FROM python:3.12-slim
 
-# Display in real time logs instead of writing in a file
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Set environment variables to prevent Python from writing .pyc (__pycache__) files
+# and to ensure output is sent straight to the terminal without buffering (lighter container).
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
