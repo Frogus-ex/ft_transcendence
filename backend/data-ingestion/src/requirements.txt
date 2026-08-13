@@ -12,6 +12,6 @@ websockets==17.0.1
 # Copy the file 'ingest-test.py' somewhere to execute it
 # And then run the file with "python file.py"
 # Database (Redis & PostgreSQL)
-redis==8.10.0
+redis==8.1.0
 asyncpg==0.31.0
 psycopg2-binary==2.9.12
