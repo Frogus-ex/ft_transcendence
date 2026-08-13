@@ -1,17 +1,31 @@
 # ft_transcendence :
 
 ## Prérequis
-- Podman + podman-compose installés (voir https://podman.io/docs/installation)
-- Copier `.env.example` vers `.env` et remplir les valeurs
+- Copier `.env.example` vers `.env` (section 2)
+- Générer les secrets locaux (voir section ci-dessous)
 
-## Lancer le projet
+## 1 Secrets
 
-\`\`\`bash
+Les mots de passe sensibles (Postgres, Redis, JWT) ne sont pas stockés en clair dans `.env` — ils passent par Docker secrets, sous forme de fichiers dans le dossier `secrets/`, jamais versionnés sur Git.
+
+Avant de lancer le projet, génère tes propres secrets locaux :
+
+```bash
+openssl rand -base64 24 > secrets/postgres_password.txt
+openssl rand -base64 24 > secrets/redis_password.txt
+openssl rand -hex 32 > secrets/jwt_secret.txt
+```
+
+⚠️ Ces fichiers sont propres à chaque environnement (dev local, CI, prod) — ne jamais les copier d'une instance à une autre, ni les committer.
+
+## 2 Lancer le projet
+
+```bash
 cp .env.example .env
 # éditer .env avec de vraies valeurs (voir section Secrets ci-dessous)
 podman-compose up -d
 podman-compose ps    # vérifier que tout est "healthy"
-\`\`\`
+```
 
 ## Services
 
@@ -21,17 +35,12 @@ podman-compose ps    # vérifier que tout est "healthy"
 | redis | Cache + broker Celery | 6379 |
 | data-pipeline | Ingestion websocket Binance | - |
 
-## Générer des secrets
-
-\`\`\`bash
-openssl rand -base64 24   # POSTGRES_PASSWORD, REDIS_PASSWORD
-openssl rand -hex 32      # JWT_SECRET
-\`\`\`
-
 ## Commandes utiles
 
-\`\`\`bash
+```bash
+podman-compose up -d #(specifie ou non le container a lancer)
 podman-compose logs -f <service>   # suivre les logs d'un service
-podman-compose down                # tout arrêter
+podman-compose down                # tout arrêter (ajoutez -v pour supprimer meme les volumes persistant)
 podman-compose build --no-cache <service>   # rebuild forcé
-\`\`\`
+podman-compose ps #check les containers en cours
+```
