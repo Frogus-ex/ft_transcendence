@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Préparer un .env de test
       - name: Vérifier la syntaxe du docker-compose.yml
         run: docker compose config
 
