@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+# Nécessaire pour que le job de résumé puisse écrire un commentaire sur la PR
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ---------------------------------------------------------------
+  # JOB 1 : valide que le docker-compose.yml est syntaxiquement correct
+  # avant même de tenter un build - échoue vite, feedback immédiat.
+  # ---------------------------------------------------------------
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier la syntaxe du docker-compose.yml
+        run: docker compose config
+
+  # ---------------------------------------------------------------
+  # JOB 2 : build + démarrage de TOUTE la stack en une fois (Compose
+  # gère l'ordre via depends_on), puis diagnostic explicite service
+  # par service - évite de refaire 3x le même travail (db/redis
+  # redémarrés dans chaque job d'une matrice) tout en gardant un
+  # message d'erreur clair qui dit PRÉCISÉMENT quel service a fail.
+  # ---------------------------------------------------------------
+  test-services:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Préparer un .env de test
+        run: |
+          cp .env.example .env
+          # Valeurs de test uniquement - jamais de vrais secrets dans la CI
+          sed -i 's/changeme/ci_test_value_1234/g' .env
+
+      - name: Build de toutes les images
+        run: docker compose build
+
+      - name: Démarrer toute la stack
+        run: docker compose up -d
+
+      - name: Diagnostic par service
+        run: |
+          # Liste des services à vérifier - ajouter ici au fur et à mesure
+          SERVICES="db redis data-pipeline"
+          FAILED=""
+
+          for SERVICE in $SERVICES; do
+            CONTAINER_ID=$(docker compose ps -q $SERVICE)
+
+            if [ -z "$CONTAINER_ID" ]; then
+              echo "❌ [$SERVICE] conteneur introuvable"
+              FAILED="$FAILED $SERVICE"
+              continue
+            fi
+
+            HAS_HEALTHCHECK=$(docker inspect --format='{{if .State.Health}}yes{{else}}no{{end}}' $CONTAINER_ID)
+
+            if [ "$HAS_HEALTHCHECK" = "yes" ]; then
+              ELAPSED=0
+              while [ $ELAPSED -lt 60 ]; do
+                STATUS=$(docker inspect --format='{{.State.Health.Status}}' $CONTAINER_ID)
+                [ "$STATUS" = "healthy" ] && break
+                sleep 3
+                ELAPSED=$((ELAPSED + 3))
+              done
+
+              if [ "$STATUS" != "healthy" ]; then
+                echo "❌ [$SERVICE] statut: $STATUS"
+                FAILED="$FAILED $SERVICE"
+              else
+                echo "✅ [$SERVICE] healthy"
+              fi
+            else
+              sleep 5
+              STATE=$(docker inspect --format='{{.State.Status}}' $CONTAINER_ID)
+              if [ "$STATE" != "running" ]; then
+                echo "❌ [$SERVICE] statut: $STATE"
+                FAILED="$FAILED $SERVICE"
+              else
+                echo "✅ [$SERVICE] running"
+              fi
+            fi
+          done
+
+          if [ -n "$FAILED" ]; then
+            echo "::error::Service(s) en échec :$FAILED"
+            exit 1
+          fi
+
+      - name: Nettoyage
+        if: always()
+        run: docker compose down -v
+
+  # ---------------------------------------------------------------
+  # JOB 3 : résumé lisible, posté en commentaire sur la PR
+  # ---------------------------------------------------------------
+  pr-summary:
+    needs: test-services
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Poster le résumé sur la PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conclusion = "${{ needs.test-services.result }}";
+            const emoji = conclusion === "success" ? "✅" : "❌";
+            const title = conclusion === "success"
+              ? "Tous les services ont passé le build + healthcheck"
+              : "Au moins un service a échoué - voir l'onglet Actions pour le détail";
+
+            const body = [
+              `### ${emoji} CI Report`,
+              "",
+              `**Résultat global :** ${title}`,
+              "",
+              "| Service | Vérifié |",
+              "|---|---|",
+              "| db | build + healthcheck (pg_isready) |",
+              "| redis | build + healthcheck (redis-cli ping) |",
+              "| data-pipeline | build + stabilité au démarrage |",
+              "",
+              `Détails complets : [voir le run](${context.payload.pull_request.html_url}/checks)`
+            ].join("\n");
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
