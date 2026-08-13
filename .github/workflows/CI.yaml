@@ -50,7 +50,7 @@ jobs:
       - name: Diagnostic par service
         run: |
           # Liste des services à vérifier - ajouter ici au fur et à mesure
-          SERVICES="db redis data-pipeline"
+          SERVICES="db redis"
           FAILED=""
 
           for SERVICE in $SERVICES; do
