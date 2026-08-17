@@ -60,6 +60,20 @@ services:
     networks:
       - transcendence_net
 
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    container_name: transcendence_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    # depends_on:
+    #   - frontend
+    networks:
+      - transcendence_net
+
   # frontend:
   #   build:
   #     context: ./frontend
