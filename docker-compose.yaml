@@ -1,0 +1,90 @@
+services:
+  db:
+    image: docker.io/library/postgres:16-alpine
+    container_name: transcendence_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - transcendence_net
+
+  redis:                                        
+    image: docker.io/library/redis:7-alpine
+    container_name: transcendence_redis
+    restart: unless-stopped
+    command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
+    secrets:
+      - redis_password
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/redis_password)\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - transcendence_net
+
+  data-pipeline:
+    build:
+      context: ./backend/data-ingestion/src
+      dockerfile: Dockerfile
+    container_name: transcendence_ingestion
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      # db:
+      #   condition: service_healthy
+    networks:
+      - transcendence_net
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: transcendence_frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${FRONTEND_PORT}:5173"
+  #   networks:
+  #     - transcendence_net
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  transcendence_net:
+    driver: bridge
