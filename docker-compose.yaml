@@ -60,7 +60,7 @@ services:
 
   data-pipeline:
     build:
-      context: ./backend/data-ingestion
+      context: ./backend/data-ingestion/src
       dockerfile: Dockerfile
     container_name: transcendence_ingestion
     restart: unless-stopped
@@ -182,34 +182,6 @@ services:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
-    networks:
-      - transcendence_net
-
-  nginx:
-    build:
-      context: ./infra/nginx
-      dockerfile: Dockerfile
-    container_name: transcendence_nginx
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-      - "8443:443"
-    # depends_on:
-    #   - frontend
-    networks:
-      - transcendence_net
-
-  nginx:
-    build:
-      context: ./infra/nginx
-      dockerfile: Dockerfile
-    container_name: transcendence_nginx
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-      - "8443:443"
-    # depends_on:
-    #   - frontend
     networks:
       - transcendence_net
 
