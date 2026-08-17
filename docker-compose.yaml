@@ -196,6 +196,34 @@ services:
     networks:
       - transcendence_net
 
+<<<<<<< HEAD
+=======
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    container_name: transcendence_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    # depends_on:
+    #   - frontend
+    networks:
+      - transcendence_net
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: transcendence_frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${FRONTEND_PORT}:5173"
+  #   networks:
+  #     - transcendence_net
+
+>>>>>>> 16843c4 (<feature nginx>: creation of https process and configuration of nginx waiting for proper frontend dev)
 secrets:
   postgres_admin_password:
     file: ./secrets/postgres_admin_password.txt
