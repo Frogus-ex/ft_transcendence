@@ -1,5 +1,4 @@
-from parser import *
-from redis_client import *
+from src import parse_raw_data, process_and_dispatch
 
 from websockets.exceptions import ConnectionClosed
 import asyncio
@@ -14,7 +13,7 @@ logging.basicConfig(
 
 BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
 
-async def listen_websockets():
+async def run_ingestion():
 	logging.info("Connecting to Binance websockets...")
 
 	while True:
@@ -33,8 +32,7 @@ async def listen_websockets():
 						cleaned_data = parse_raw_data(raw_data)
 
 						if (cleaned_data):
-							save_to_redis(cleaned_data)
-							logging.info(f"Pushed to Redis: {cleaned_data['symbol']} -> ${cleaned_data['price']}")
+							await process_and_dispatch(cleaned_data)
 
 		except ConnectionClosed:
 			logging.warning(f"Connection closed. Reconnecting in 2s...")
@@ -45,4 +43,4 @@ async def listen_websockets():
 			await asyncio.sleep(5)
 
 if __name__ == "__main__":
-	asyncio.run(listen_websockets())
+	asyncio.run(run_ingestion())
