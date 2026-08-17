@@ -14,9 +14,16 @@ Avant de lancer le projet, génère tes propres secrets locaux :
 openssl rand -base64 24 > secrets/postgres_password.txt
 openssl rand -base64 24 > secrets/redis_password.txt
 openssl rand -hex 32 > secrets/jwt_secret.txt
+openssl rand -base64 24 > secrets/grafana_admin_password.txt
 ```
 
 ⚠️ Ces fichiers sont propres à chaque environnement (dev local, CI, prod) — ne jamais les copier d'une instance à une autre, ni les committer.
+
+HTTPS et certificat
+
+Le service nginx sert de point d'entrée unique en HTTPS — toute connexion HTTP (port 80) est automatiquement redirigée vers HTTPS.
+
+Le certificat utilisé est auto-signé, généré automatiquement au moment du build de l'image (infra/nginx/Dockerfile) — aucune étape manuelle nécessaire. Ton navigateur affichera un avertissement de sécurité à la première connexion (normal pour un certificat auto-signé, à accepter manuellement) : c'est attendu en dev/évaluation locale, un vrai certificat signé par une autorité (Let's Encrypt) nécessiterait un nom de domaine public.
 
 ## 2 Lancer le projet
 
