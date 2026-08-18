@@ -60,7 +60,7 @@ services:
 
   data-pipeline:
     build:
-      context: ./backend/data-ingestion/src
+      context: ./backend/data-ingestion
       dockerfile: Dockerfile
     container_name: transcendence_ingestion
     restart: unless-stopped
