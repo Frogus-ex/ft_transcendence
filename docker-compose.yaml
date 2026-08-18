@@ -140,6 +140,8 @@ services:
     image: docker.io/grafana/grafana:latest
     container_name: transcendence_grafana
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
@@ -147,6 +149,7 @@ services:
       - grafana_admin_password
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
     networks:
