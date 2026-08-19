@@ -44,21 +44,21 @@ services:
     networks:
       - transcendence_net
 
-  # data-pipeline:
-  #   build:
-  #     context: ./backend/data-ingestion/src
-  #     dockerfile: Dockerfile
-  #   container_name: transcendence_ingestion
-  #   restart: unless-stopped
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #     # db:
-  #     #   condition: service_healthy
-  #   networks:
-  #     - transcendence_net
+  data-pipeline:
+    build:
+      context: ./backend/data-ingestion
+      dockerfile: Dockerfile
+    container_name: transcendence_ingestion
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - transcendence_net
 
   nginx:
     build:
@@ -115,9 +115,9 @@ services:
     restart: unless-stopped
     environment:
       REDIS_ADDR: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_exporter_password_json
     secrets:
-      - redis_password
+      - redis_exporter_password_json
     depends_on:
       redis:
         condition: service_healthy
@@ -128,8 +128,10 @@ services:
     image: docker.io/prom/prometheus:latest
     container_name: transcendence_prometheus
     restart: unless-stopped
-    ports:
-      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus/'
+      - '--web.route-prefix=/prometheus/'
     volumes:
       - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -140,11 +142,11 @@ services:
     image: docker.io/grafana/grafana:latest
     container_name: transcendence_grafana
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_SERVER_ROOT_URL: "https://localhost:8443/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     secrets:
       - grafana_admin_password
     volumes:
@@ -171,6 +173,8 @@ secrets:
     file: ./secrets/postgres_password.txt
   redis_password:
     file: ./secrets/redis_password.txt
+  redis_exporter_password_json:
+    file: ./secrets/redis_exporter_password.json
   jwt_secret:
     file: ./secrets/jwt_secret.txt
   grafana_admin_password:
