@@ -70,11 +70,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -142,11 +138,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "max(max_over_time(redis_uptime_in_seconds{instance=~\"$instance\"}[$__interval]))",
           "format": "time_series",
@@ -164,11 +156,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -237,11 +225,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(redis_connected_clients{instance=~\"$instance\"})",
           "format": "time_series",
@@ -259,11 +243,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -336,11 +316,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(100 * (redis_memory_used_bytes{instance=~\"$instance\"}  / redis_memory_max_bytes{instance=~\"$instance\"}))",
           "format": "time_series",
@@ -358,11 +334,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -446,11 +418,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(rate(redis_commands_total{instance=~\"$instance\"} [1m])) by (cmd)",
           "format": "time_series",
@@ -468,11 +436,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -557,11 +521,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "irate(redis_keyspace_hits_total{instance=~\"$instance\"}[5m])",
           "format": "time_series",
@@ -577,11 +537,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "irate(redis_keyspace_misses_total{instance=~\"$instance\"}[5m])",
           "format": "time_series",
@@ -601,11 +557,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -706,11 +658,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "redis_memory_used_bytes{instance=~\"$instance\"}",
           "format": "time_series",
@@ -724,11 +672,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "redis_memory_max_bytes{instance=~\"$instance\"}",
           "format": "time_series",
@@ -745,11 +689,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -833,11 +773,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(rate(redis_net_input_bytes_total{instance=~\"$instance\"}[5m]))",
           "format": "time_series",
@@ -849,11 +785,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(rate(redis_net_output_bytes_total{instance=~\"$instance\"}[5m]))",
           "format": "time_series",
@@ -870,11 +802,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -981,11 +909,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum (redis_db_keys{instance=~\"$instance\"}) by (db, instance)",
           "format": "time_series",
@@ -1003,11 +927,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -1091,11 +1011,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum (redis_db_keys{instance=~\"$instance\"}) by (instance) - sum (redis_db_keys_expiring{instance=~\"$instance\"}) by (instance)",
           "format": "time_series",
@@ -1109,11 +1025,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum (redis_db_keys_expiring{instance=~\"$instance\"}) by (instance)",
           "format": "time_series",
@@ -1131,11 +1043,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -1264,11 +1172,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(rate(redis_expired_keys_total{instance=~\"$instance\"}[5m])) by (instance)",
           "format": "time_series",
@@ -1284,11 +1188,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(rate(redis_evicted_keys_total{instance=~\"$instance\"}[5m])) by (instance)",
           "format": "time_series",
@@ -1305,11 +1205,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -1392,11 +1288,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(redis_connected_clients{instance=~\"$instance\"})",
           "format": "time_series",
@@ -1407,11 +1299,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(redis_blocked_clients{instance=~\"$instance\"})",
           "format": "time_series",
@@ -1426,11 +1314,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -1534,11 +1418,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(irate(redis_commands_duration_seconds_total{instance =~ \"$instance\"}[1m])) by (cmd)\n  /\nsum(irate(redis_commands_total{instance =~ \"$instance\"}[1m])) by (cmd)\n",
           "format": "time_series",
@@ -1556,11 +1436,7 @@
     {
       "datasource": {
         "type": "prometheus",
-<<<<<<< HEAD
         "uid": "prometheus"
-=======
-        "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
       },
       "fieldConfig": {
         "defaults": {
@@ -1643,11 +1519,7 @@
         {
           "datasource": {
             "type": "prometheus",
-<<<<<<< HEAD
             "uid": "prometheus"
-=======
-            "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
           },
           "expr": "sum(irate(redis_commands_duration_seconds_total{instance=~\"$instance\"}[1m])) by (cmd) != 0",
           "format": "time_series",
@@ -1675,11 +1547,7 @@
         "current": {},
         "datasource": {
           "type": "prometheus",
-<<<<<<< HEAD
           "uid": "prometheus"
-=======
-          "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
         },
         "definition": "label_values(redis_up, namespace)",
         "hide": 0,
@@ -1701,11 +1569,7 @@
         "current": {},
         "datasource": {
           "type": "prometheus",
-<<<<<<< HEAD
           "uid": "prometheus"
-=======
-          "uid": "Prometheus"
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
         },
         "definition": "label_values(redis_up{namespace=~\"$namespace\"}, instance)",
         "hide": 0,
