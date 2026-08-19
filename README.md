@@ -21,8 +21,6 @@ openssl rand -base64 24 | tr -d '\n' > secrets/grafana_admin_password.txt
 #pour generer le mdp du redis exporter au format accepter par celui ci.
 python3 -c "import json pw = open('secrets/redis_password.txt').read().strip()
 json.dump({'redis://redis:6379': pw}, open('secrets/redis_password.json', 'w'))"
-=======
->>>>>>> c80d167 (<feature>: creation of prometheus process for monitoring exporters deployement)
 ```
 
 ⚠️ Ces fichiers sont propres à chaque environnement (dev local, CI, prod) — ne jamais les copier d'une instance à une autre, ni les committer.
