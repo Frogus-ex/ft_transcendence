@@ -4,11 +4,7 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-<<<<<<< HEAD
     url: http://prometheus:9090/prometheus
     uid: prometheus
-=======
-    url: http://prometheus:9090
->>>>>>> 2f6ae96 (<feature>grafana is setup all dashboards are functionnal)
     isDefault: true
     editable: false
