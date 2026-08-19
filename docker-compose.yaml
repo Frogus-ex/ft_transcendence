@@ -139,7 +139,7 @@ services:
       - transcendence_net
 
   grafana:
-    image: docker.io/grafana/grafana:latest
+    image: docker.io/grafana/grafana:11.4.0
     container_name: transcendence_grafana
     restart: unless-stopped
     environment:
