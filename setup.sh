@@ -1,60 +1,29 @@
 #!/bin/bash
-# setup.sh — Script d'onboarding pour l'équipe ft_transcendence
-#
-# Usage :
-#   chmod +x setup.sh
-#   ./setup.sh
+# setup.sh — Crée tout ce qu'il faut pour que "podman-compose up -d" fonctionne.
+set -e
 
-set -e  # arrête le script au premier échec, pour ne pas continuer sur une base cassée
-
-echo "🚀 Setup ft_transcendence"
-echo "-------------------------"
-
-# --- 1. Vérifier que Podman est installé ---
-if ! command -v podman >/dev/null 2>&1; then
-  echo "❌ Podman n'est pas installé."
-  echo "   Voir : https://podman.io/docs/installation"
-  exit 1
-fi
-echo "✅ Podman trouvé ($(podman --version))"
-
-# --- 2. Vérifier que podman-compose est installé ---
-if ! command -v podman-compose >/dev/null 2>&1; then
-  echo "❌ podman-compose n'est pas installé."
-  echo "   Installe-le avec : pip install podman-compose"
-  exit 1
-fi
-echo "✅ podman-compose trouvé ($(podman-compose --version 2>&1 | head -n1))"
-
-# --- 3. Silencer l'avertissement "Emulate Docker CLI using podman" ---
-if [ ! -f /etc/containers/nodocker ]; then
-  echo "ℹ️  Silence l'avertissement Podman (nécessite sudo)..."
-fi
-
-# --- 4. Créer le fichier .env s'il n'existe pas ---
+# --- .env ---
 if [ ! -f .env ]; then
-  if [ ! -f .env.example ]; then
-    echo "❌ .env.example introuvable. Impossible de générer .env."
-    exit 1
-  fi
   cp .env.example .env
-  echo "✅ .env créé à partir de .env.example"
-  echo ""
-  echo "⚠️  IMPORTANT : édite maintenant .env et remplace les valeurs 'changeme' par de vraies valeurs."
-  echo "   Génère des secrets forts avec :"
-  echo "     openssl rand -base64 24   # pour les mots de passe"
-  echo "     openssl rand -hex 32      # pour JWT_SECRET"
-else
-  echo "ℹ️  .env existe déjà, rien touché."
+  echo "✅ .env créé"
 fi
 
-# --- 5. Récapitulatif ---
-echo ""
-echo "-------------------------"
-echo "✅ Setup terminé."
-echo ""
-echo "Prochaines étapes :"
-echo "  1. Vérifie/complète les valeurs dans .env"
-echo "  2. Lance le projet :   podman-compose up -d"
-echo "  3. Vérifie le statut : podman-compose ps"
-echo "  4. Suis les logs :     podman-compose logs -f <service>"
+# --- secrets/ ---
+mkdir -p secrets
+
+[ -f secrets/postgres_password.txt ] || openssl rand -base64 24 > secrets/postgres_password.txt
+[ -f secrets/redis_password.txt ]    || openssl rand -base64 24 > secrets/redis_password.txt
+[ -f secrets/jwt_secret.txt ]        || openssl rand -hex 32 > secrets/jwt_secret.txt
+[ -f secrets/grafana_admin_password.txt ] || openssl rand -base64 24 > secrets/grafana_admin_password.txt
+
+# redis_password.json est dérivé de redis_password.txt (format requis par redis_exporter)
+# régénéré à chaque run pour rester synchronisé si redis_password.txt change
+python3 -c "
+import json
+pw = open('secrets/redis_password.txt').read().strip()
+json.dump({'redis://redis:6379': pw}, open('secrets/redis_exporter_password.json', 'w'))
+"
+
+echo "✅ secrets/ prêt"
+
+echo "✅ Setup terminé — lance : podman-compose up -d"
