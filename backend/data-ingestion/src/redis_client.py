@@ -18,15 +18,14 @@ r = redis.Redis(
     protocol=2
 )
 
-class   DateTimeEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, (datetime)):
-            return obj.isoformat()
-        return super().default(obj)
+def date_time_encoder(obj):
+    if isinstance(obj, (datetime)):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 def save_to_cache(data: dict) -> None :
     symbol = data["symbol"]
     key = f"ticker:{symbol}"
 
     # Saving the cleaned data into json format
-    r.set(key, json.dumps(data, cls=DateTimeEncoder))
+    r.set(key, json.dumps(data, default=date_time_encoder))
