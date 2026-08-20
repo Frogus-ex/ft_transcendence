@@ -4,31 +4,33 @@ on:
   pull_request:
     branches: [develop, main]
 
-# Nécessaire pour que le job de résumé puisse écrire un commentaire sur la PR
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
   # ---------------------------------------------------------------
-  # JOB 1 : valide que le docker-compose.yml est syntaxiquement correct
-  # avant même de tenter un build - échoue vite, feedback immédiat.
+  # JOB 1 : valide la syntaxe du compose. Réutilise "make setup"
+  # (le même mécanisme que les développeurs utilisent en local) pour
+  # générer .env + secrets, plutôt que de dupliquer cette logique ici.
   # ---------------------------------------------------------------
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Préparer un .env de test
-      - name: Vérifier la syntaxe du docker-compose.yml
+      - name: Générer .env et les secrets (via make setup)
+        run: make setup
+
+      - name: Vérifier la syntaxe du docker-compose.yaml
         run: docker compose config
 
   # ---------------------------------------------------------------
-  # JOB 2 : build + démarrage de TOUTE la stack en une fois (Compose
-  # gère l'ordre via depends_on), puis diagnostic explicite service
-  # par service - évite de refaire 3x le même travail (db/redis
-  # redémarrés dans chaque job d'une matrice) tout en gardant un
-  # message d'erreur clair qui dit PRÉCISÉMENT quel service a fail.
+  # JOB 2 : build + démarrage de toute la stack, diagnostic par
+  # service. Les runners GitHub utilisent Docker nativement - on
+  # surcharge donc la variable COMPOSE du Makefile pour utiliser
+  # "docker compose" plutôt que "podman-compose" (utilisé en dev
+  # local), sans dupliquer la logique de build/up.
   # ---------------------------------------------------------------
   test-services:
     needs: validate
@@ -36,11 +38,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Préparer un .env de test
-        run: |
-          cp .env.example .env
-          # Valeurs de test uniquement - jamais de vrais secrets dans la CI
-          sed -i 's/changeme/ci_test_value_1234/g' .env
+      - name: Générer .env et les secrets
+        run: make setup
 
       - name: Build de toutes les images
         run: docker compose build
@@ -50,8 +49,10 @@ jobs:
 
       - name: Diagnostic par service
         run: |
-          # Liste des services à vérifier - ajouter ici au fur et à mesure
-          SERVICES="db redis"
+          # data-pipeline est inclus volontairement : si le code applicatif
+          # (hors périmètre DevOps) casse, la CI doit le signaler plutôt
+          # que de masquer le problème.
+          SERVICES="db redis nginx node-exporter postgres-exporter redis-exporter prometheus grafana"
           FAILED=""
 
           for SERVICE in $SERVICES; do
@@ -102,7 +103,7 @@ jobs:
         run: docker compose down -v
 
   # ---------------------------------------------------------------
-  # JOB 3 : résumé lisible, posté en commentaire sur la PR
+  # JOB 3 : résumé formaté, posté en commentaire sur la PR
   # ---------------------------------------------------------------
   pr-summary:
     needs: test-services
@@ -126,9 +127,15 @@ jobs:
               "",
               "| Service | Vérifié |",
               "|---|---|",
-              "| db | build + healthcheck (pg_isready) |",
-              "| redis | build + healthcheck (redis-cli ping) |",
+              "| db (PostgreSQL) | build + healthcheck |",
+              "| redis | build + healthcheck |",
               "| data-pipeline | build + stabilité au démarrage |",
+              "| nginx | build + démarrage |",
+              "| node-exporter | démarrage |",
+              "| postgres-exporter | démarrage |",
+              "| redis-exporter | démarrage |",
+              "| prometheus | démarrage |",
+              "| grafana | démarrage |",
               "",
               `Détails complets : [voir le run](${context.payload.pull_request.html_url}/checks)`
             ].join("\n");
