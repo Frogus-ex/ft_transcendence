@@ -1,7 +1,8 @@
 FROM nginx:alpine
 
 # openssl n'est pas installé par défaut sur l'image nginx:alpine minimale
-RUN apk add --no-cache openssl
+RUN apk upgrade --no-cache && \
+    apk add --no-cache openssl
 
 # Génère le certificat auto-signé directement dans l'image, au moment du build
 # Aucune étape manuelle nécessaire côté développeur
