@@ -6,8 +6,15 @@ function HomePage() {
   return (
     <div>
       <h1 className="text-4xl font-bold text-blue-500">Accueil</h1>
-      <p>Bienvenue sur ft_transcendence.</p>
-      <Button variant="secondary" size="large" onClick={() => navigate("/login")}>Login</Button>
+        <p>Bienvenue sur ft_transcendence.</p>
+          <Button 
+            variant="secondary" 
+            size="large" 
+            onClick={() => navigate("/login")}
+            type="button"
+            >
+              Login
+            </Button>
     </div>
   )
 }

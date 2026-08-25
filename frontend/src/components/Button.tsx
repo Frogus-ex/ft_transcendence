@@ -1,22 +1,23 @@
+import {buttonColors, textSizes} from '../styles/tokens'
+
+
 type ButtonProps = {
     children : React.ReactNode
     variant : "primary" | "secondary"
     size : "small" | "medium" | "large"
+    type : "button" | "submit"
     onClick?: () => void 
 }
 
-function Button({ children, variant, size, onClick }: ButtonProps) {
-    const couleurs = {
-        primary: "bg-green-500",
-        secondary: "bg-red-500",
-    }
-    const taille = {
-        small: "text-sm px-2 py-1",
-        medium: "text-base px-4 py-2",
-        large: "text-lg px-6 py-3",
-    }
+function Button({ children, variant, size, onClick, type }: ButtonProps) {
     return (
-        <button className={couleurs[variant] + " " + taille[size]} onClick={onClick}>{children}</button>
+        <button 
+            className={buttonColors[variant] + " " + textSizes[size]} 
+            onClick={onClick}
+            type={type}
+        >
+            {children}
+        </button>
     )
 }
 
