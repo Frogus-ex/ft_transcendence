@@ -11,10 +11,12 @@ Les mots de passe sensibles (Postgres, Redis, JWT) ne sont pas stockés en clair
 Avant de lancer le projet, génère tes propres secrets locaux :
 
 ```bash
-openssl rand -base64 24 > secrets/postgres_password.txt
-openssl rand -base64 24 > secrets/redis_password.txt
-openssl rand -hex 32 > secrets/jwt_secret.txt
-openssl rand -base64 24 > secrets/grafana_admin_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/postgres_admin_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/postgres_ingest_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/postgres_reader_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/redis_password.txt
+openssl rand -hex 32 | tr -d '\n' > secrets/jwt_secret.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/grafana_admin_password.txt
 #pour generer le mdp du redis exporter au format accepter par celui ci.
 python3 -c "import json pw = open('secrets/redis_password.txt').read().strip()
 json.dump({'redis://redis:6379': pw}, open('secrets/redis_password.json', 'w'))"
