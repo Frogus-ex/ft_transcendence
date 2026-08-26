@@ -5,7 +5,7 @@ type LabelProps = {
     htmlFor : string
 }
 
-function Label({ children, htmlFor} : LabelProps) {
+function Label({ children, htmlFor } : LabelProps) {
     return (
         <label className={labelStyle} htmlFor={htmlFor}>
             {children}

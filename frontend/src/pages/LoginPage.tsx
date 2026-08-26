@@ -1,14 +1,19 @@
-import {useState} from 'react'
+import {Children, useState} from 'react'
 import Input from '../components/Input'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Label from '../components/Label'
 import Avatar from '../components/Avatar'
 import Badge from '../components/Badge'
+import Modal from '../components/Modal'
+import Alert from '../components/Alert'
+import Tooltip from '../components/Tooltip'
+import Tag from '../components/Tag'
 
 function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isModalOpen, setIsModalOpen] = useState(false)
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     console.log(email, password)
@@ -40,7 +45,7 @@ function LoginPage() {
           placeholder="password"
         />
         <Button 
-          variant="secondary" 
+          variant="primary" 
           size="medium" 
           type="submit">Log in
         </Button>
@@ -48,8 +53,30 @@ function LoginPage() {
       <Card
         padding="large">
         <Avatar src="https://i.pravatar.cc/150" alt="Photo de profil" size="large"></Avatar>
-        <Badge variant="online" size="large" label="online"></Badge>
+          <Tooltip text="Online">
+            <Badge variant="online" size="large"></Badge>
+          </Tooltip>
       </Card>
+      <Button 
+        variant="secondary" 
+        size="medium" 
+        type="button"
+        onClick={() => setIsModalOpen(true)}
+      >
+        Ouvrir
+      </Button>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <p>Ceci est une modal !</p>
+      </Modal>
+      <Alert variant="success">
+        Connexion reussi !
+      </Alert>
+      <Alert variant="error">
+        Une erreur est survenue
+      </Alert>
+      <Tag variant="success">
+        Online
+      </Tag>
     </div>
   )
 }
