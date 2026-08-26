@@ -1,7 +1,7 @@
-from src import save_to_cache
+from redis_client import save_to_cache
+from db_client import save_to_db
 
 import time
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +11,8 @@ SAVE_INTERVAL_SECOND = 1.0
 LAST_SAVED_PRICE = None
 
 async def process_and_dispatch(cleaned_data: dict):
+    """Process the cleaned data and dispatch it to Redis and Postgres"""
+
     global  LAST_DB_SAVE, LAST_SAVED_PRICE
 
     current_time = time.time()
@@ -26,9 +28,8 @@ async def process_and_dispatch(cleaned_data: dict):
 
     if time_passed and price_changed:
         # Save the price to the DB
-        save_to_db(cleaned_data)
+        await save_to_db(cleaned_data)
 
         # Updating the global variables
         LAST_DB_SAVE = current_time
         LAST_SAVED_PRICE = cleaned_data['price']
-        logger.info(f"Saved to Postgres: {cleaned_data['symbol']} -> ${cleaned_data['price']}")
