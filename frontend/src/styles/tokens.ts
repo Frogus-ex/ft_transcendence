@@ -21,10 +21,10 @@ export const badgeColors = {
 }
 
 export const alertColors = {
-  error: "bg-red-100 text-red-900",
-  success: "bg-green-100 text-green-900",
-  warning: "bg-orange-100 text-orange-900",
-  info: "bg-blue-100 text-blue-900"
+  error: "bg-red-950 text-red-300",
+  success: "bg-green-950 text-green-300",
+  warning: "bg-orange-950 text-orange-300",
+  info: "bg-blue-950 text-blue-300",
 }
 
 export const textSizes = {
@@ -42,11 +42,16 @@ export const textColors = {
 }
 
 export const tagColors = {
-  success: "bg-green-100 text-green-700",
-  error: "bg-red-100 text-red-700",
-  warning: "bg-orange-100 text-orange-700",
-  info: "bg-blue-100 text-blue-700",
-  neutral: "bg-gray-100 text-gray-700",
+  success: "bg-green-950 text-green-300",
+  error: "bg-red-950 text-red-300",
+  warning: "bg-orange-950 text-orange-300",
+  info: "bg-blue-950 text-blue-300",
+  neutral: "bg-gray-800 text-gray-300",
+}
+
+export const priceColors = {
+  up: "text-green-400",
+  down: "text-red-400",
 }
 
 export const imgSizes = {
@@ -68,5 +73,11 @@ export const badgeSizes = {
   large: "w-3 h-3 rounded-full"
 }
 
-export const cardStyle = "border border-gray-300 rounded-lg bg-white shadow-md"
-export const labelStyle = "text-sm font-medium text-gray-700"
+export const cardStyle = "border border-gray-800 rounded-lg bg-gray-900 shadow-md"
+export const labelStyle = "text-sm font-medium text-gray-400"
+export const pageBackground = "bg-gray-950"
+export const surfaceBackground = "bg-gray-900"
+export const textPrimary = "text-gray-100"
+export const textSecondary = "text-gray-400"
+export const borderColor = "border-gray-800"
+export const inputStyle = "bg-gray-900 border border-gray-700 rounded-md text-gray-100 placeholder-gray-500 focus:outline-none focus:border-white"

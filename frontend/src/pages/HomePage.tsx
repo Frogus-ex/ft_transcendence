@@ -5,7 +5,7 @@ function HomePage() {
   const navigate = useNavigate()
   return (
     <div>
-      <h1 className="text-4xl font-bold text-blue-500">Accueil</h1>
+      <h1 className="text-4xl font-bold text-white">Accueil</h1>
         <p>Bienvenue sur ft_transcendence.</p>
           <Button 
             variant="secondary" 

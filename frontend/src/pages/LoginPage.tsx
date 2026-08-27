@@ -20,8 +20,8 @@ function LoginPage() {
   }
   return (
     <div>
-      <h1 className="text-4xl font-bold text-blue-500">Connexion</h1>
-      <form onSubmit={handleSubmit}>
+      <h1 className="text-3xl font-bold text-white">Connexion :</h1>
+      <form onSubmit={handleSubmit} className="flex items-center gap-4">
         <Label htmlFor="email">
           Email :
         </Label>
@@ -58,7 +58,7 @@ function LoginPage() {
           </Tooltip>
       </Card>
       <Button 
-        variant="secondary" 
+        variant="secondary"
         size="medium" 
         type="button"
         onClick={() => setIsModalOpen(true)}
@@ -74,8 +74,8 @@ function LoginPage() {
       <Alert variant="error">
         Une erreur est survenue
       </Alert>
-      <Tag variant="success">
-        Online
+      <Tag variant="error">
+        Offline
       </Tag>
     </div>
   )

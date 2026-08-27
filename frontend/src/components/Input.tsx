@@ -1,4 +1,4 @@
-import {textSizes} from '../styles/tokens'
+import {inputStyle, textSizes} from '../styles/tokens'
 
 type InputProps = {
     value : string
@@ -12,7 +12,7 @@ type InputProps = {
 function Input({value, id, onChange, type, placeholder, size}: InputProps){
     return(
         <input 
-            className={textSizes[size]} 
+            className={textSizes[size] + " " + inputStyle} 
             value={value} 
             id={id}
             onChange={onChange} 
