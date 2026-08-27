@@ -1,16 +1,16 @@
-import { labelStyle } from "../styles/tokens"
+import { labelStyle } from "../styles/tokens";
 
 type LabelProps = {
-    children : React.ReactNode
-    htmlFor : string
+  children: React.ReactNode;
+  htmlFor: string;
+};
+
+function Label({ children, htmlFor }: LabelProps) {
+  return (
+    <label className={labelStyle} htmlFor={htmlFor}>
+      {children}
+    </label>
+  );
 }
 
-function Label({ children, htmlFor } : LabelProps) {
-    return (
-        <label className={labelStyle} htmlFor={htmlFor}>
-            {children}
-        </label>
-    )
-}
-
-export default Label
+export default Label;
