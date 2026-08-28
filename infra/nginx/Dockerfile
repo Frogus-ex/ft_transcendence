@@ -1,8 +1,12 @@
 FROM nginx:alpine
 
 # openssl n'est pas installé par défaut sur l'image nginx:alpine minimale
+<<<<<<< HEAD
 RUN apk upgrade --no-cache && \
     apk add --no-cache openssl
+=======
+RUN apk add --no-cache openssl
+>>>>>>> 5ff519a (<feature nginx>: creation of https process and configuration of nginx waiting for proper frontend dev)
 
 # Génère le certificat auto-signé directement dans l'image, au moment du build
 # Aucune étape manuelle nécessaire côté développeur
@@ -15,4 +19,8 @@ RUN mkdir -p /etc/nginx/certs && \
 
 # La config nginx est copiée dans l'image (pas montée en volume)
 # cohérent avec le certificat, tout est autonome dans l'image
+<<<<<<< HEAD
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+=======
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+>>>>>>> 5ff519a (<feature nginx>: creation of https process and configuration of nginx waiting for proper frontend dev)
