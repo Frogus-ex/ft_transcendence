@@ -18,11 +18,11 @@ function ProfilePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   useEffect(() => {
-  if (!isLoggedIn) {
-    setEmail("")
-    setPassword("")
-  }
-}, [isLoggedIn])
+    if (!isLoggedIn) {
+      setEmail("");
+      setPassword("");
+    }
+  }, [isLoggedIn]);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -31,7 +31,7 @@ function ProfilePage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="p-6">
+      <div className="flex flex-col items-center justify-center min-h-screen p-5 gap-4">
         <h1 className="text-3xl font-bold text-white">Connexion :</h1>
         <form onSubmit={handleSubmit} className="flex items-center gap-4">
           <Label htmlFor="email">Email :</Label>

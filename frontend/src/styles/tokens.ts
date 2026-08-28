@@ -76,7 +76,8 @@ export const badgeSizes = {
 export const cardStyle =
   "border border-gray-800 rounded-lg bg-gray-900 shadow-md";
 export const labelStyle = "text-sm font-medium text-gray-400";
-export const pageBackground = "bg-gray-950";
+export const pageBackground =
+  "bg-gradient-to-br from-gray-950 via-gray-900 to-rose-950";
 export const surfaceBackground = "bg-gray-900";
 export const textPrimary = "text-gray-100";
 export const textSecondary = "text-gray-400";

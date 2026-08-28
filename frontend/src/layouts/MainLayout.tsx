@@ -23,7 +23,6 @@ function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  
 
   return (
     <div className={pageBackground + " " + textPrimary + " min-h-screen flex"}>
@@ -42,10 +41,12 @@ function MainLayout() {
           </button>
           {isSidebarOpen && (
             <div className="flex items-center gap-2">
-              <BadgeDollarSign size={24} className="text-yellow-400" />
-              <span className="font-semibold text-lg text-yellow-400">
-                ft_transcendence
-              </span>
+              <Link to="/" className="flex items-center gap-2">
+                <BadgeDollarSign size={24} className="text-yellow-400" />
+                <span className="font-semibold text-lg text-yellow-400">
+                  ft_transcendence
+                </span>
+              </Link>
             </div>
           )}
         </div>
@@ -97,7 +98,7 @@ function MainLayout() {
           )}
         </nav>
       </aside>
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col min-h-screen">
         <Outlet context={{ isLoggedIn, setIsLoggedIn }} />
       </div>
       <Modal
