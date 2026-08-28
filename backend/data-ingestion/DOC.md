@@ -31,17 +31,33 @@ Ici, j'utilise une fonction qui va transformer la date de type *datetime* en typ
 ### db_client.py
 Bon, je n'ai pas encore fait la database, mais ça arrive ; je suis en train d'apprendre le SQL en profondeur, et j'y bosserai dans quelques jours.
 
-## PostgreSQL
+## <u>PostgreSQL</u>
+### <u>⚠️ A lire avant de manipuler la table:</u>
+Les **POSTGRES_USER** disponibles sont:
+
+| User | Role | But | Privileges/Commandes |
+| --- | --- | --- | --- |
+| *transcendence_user* | Super-user (admin) | Sert à initialiser la table | Toutes les commandes |
+| *ingest_user* | Ingestion de données | Sert à insérer les données | INSERT, SELECT |
+| *reader_user* | Read-only | Sert à faire les calculs avec les *aggregate functions* | SELECT |
+
+<u>__N'utilisez jamais</u>__ *transcendence_user* pour quoi que ce soit, sauf si urgence absolue pour modifier la table (normalement jamais le cas)!  
+Utilisez **reader_user** pour intéragir avec la table, **ingest_user** sert juste à insérer les données dans la base de données.  
+
 Pour accéder dans le conteneur de PostgreSQL:
 - podman exec -it transcendence_db psql -U **POSTGRES_USER** -d **POSTGRES_DB**  
 
 Une fois dedans, tapez **\dt** pour voir toutes les tables.
-Vous pouvez ensuite faire des requêtes SQL pour voir les données ou les manipuler (avec précaution, pas de ALTER TABLE, UPDATE ou DELETE).
+Vous pouvez ensuite faire des requêtes SQL pour voir les données et les calculer (ou les manipuler avec précaution si vous êtes **transcendence_user**).
 
-## Redis
+## <u>Redis</u>
 Pour accéder dans le conteneur de Redis:
 - podman exec -it transcendence_redis redis-cli [-h **REDIS_HOST** -p **REDIS_PORT** -a **REDIS_PASSWORD**] (pas recommandé pour question de sécurité mais en local okay)  
 
 Si vous vous connectez sans l'authentification dans la commande podman, pour d'identifier:
-* AUTH **REDIS_PASSWORD**
+* AUTH **REDIS_PASSWORD**  
+
+Vous pouvez prendre le prix actuel en cache en faisant la commande:  
+* GET ticker:**"symbol"** (pour l'instant il n'y a que BTCUSDT)  
+
 Par contre si vous faites la commande **MONITOR** et que vous annulez l'affichage en temps réel (CTRL + C), il faudra vous re-identifier avec la commande ci-dessus.

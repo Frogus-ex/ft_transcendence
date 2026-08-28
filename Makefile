@@ -19,7 +19,7 @@ setup:
 	@mkdir -p secrets
 	@[ -f secrets/postgres_admin_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/postgres_admin_password.txt
 	@[ -f secrets/postgres_ingest_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/postgres_ingest_password.txt
-	@[ -f secrets/postgres_reader_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/postgres_reader_password.txt
+	@[ -f secrets/postgres_readonly_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/postgres_readonly_password.txt
 	@[ -f secrets/redis_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/redis_password.txt
 	@[ -f secrets/jwt_secret.txt ]           || openssl rand -hex 32 | tr -d '\n' > secrets/jwt_secret.txt
 	@[ -f secrets/grafana_admin_password.txt ] || openssl rand -base64 24 | tr -d '\n' > secrets/grafana_admin_password.txt
@@ -27,6 +27,7 @@ setup:
 import json; \
 pw = open('secrets/redis_password.txt').read().strip(); \
 json.dump({'redis://redis:6379': pw}, open('secrets/redis_exporter_password.json', 'w'))"
+	@chmod +x ./backend/data-ingestion/scripts/init.sh
 	@echo "$(COLOUR_GREEN)✅ secrets/ ready$(COLOUR_END)"
 
 up:
