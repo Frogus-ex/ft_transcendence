@@ -52,7 +52,7 @@ jobs:
           # data-pipeline est inclus volontairement : si le code applicatif
           # (hors périmètre DevOps) casse, la CI doit le signaler plutôt
           # que de masquer le problème.
-          SERVICES="db redis nginx node-exporter postgres-exporter redis-exporter prometheus grafana"
+          SERVICES="postgres redis nginx node-exporter postgres-exporter redis-exporter prometheus grafana"
           FAILED=""
 
           for SERVICE in $SERVICES; do
