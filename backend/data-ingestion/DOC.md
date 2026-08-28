@@ -29,7 +29,7 @@ Avant de commencer, on initialise le client Redis avec les données de l'.env po
 Ici, j'utilise une fonction qui va transformer la date de type *datetime* en type *str*, sinon JSON va gueuler et ne va pas marcher, et après je le mets en cache.
 
 ### db_client.py
-Bon, je n'ai pas encore fait la database, mais ça arrive ; je suis en train d'apprendre le SQL en profondeur, et j'y bosserai dans quelques jours.
+Cette partie va enregistrer les données propres dans la base de données à l'aide d'une requête SQL sécurisée sous format standardisé.
 
 ## <u>PostgreSQL</u>
 ### <u>⚠️ A lire avant de manipuler la table:</u>
