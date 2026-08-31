@@ -1,22 +1,33 @@
 services:
-  db:
+  postgres:
     image: docker.io/library/postgres:16-alpine
     container_name: transcendence_db
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER}
+      POSTGRES_READONLY_PASSWORD_FILE: /run/secrets/postgres_readonly_password
+
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_HOST: postgres
     secrets:
-      - postgres_password
+      - postgres_admin_password
+      - postgres_ingest_password
+      - postgres_readonly_password
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
+      - ./backend/data-ingestion/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,6 +40,9 @@ services:
     container_name: transcendence_redis
     restart: unless-stopped
     command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
+    environment:
+      REDIS_HOST: redis
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
     secrets:
       - redis_password
     ports:
@@ -52,110 +66,124 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - postgres_ingest_password
+      - redis_password
     depends_on:
       redis:
         condition: service_healthy
-      db:
+      postgres:
         condition: service_healthy
     networks:
       - transcendence_net
 
-  nginx:
-    build:
-      context: ./infra/nginx
-      dockerfile: Dockerfile
-    container_name: transcendence_nginx
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-      - "8443:443"
-    # depends_on:
-    #   - frontend
-    networks:
-      - transcendence_net
-
-  node-exporter:
-    image: docker.io/prom/node-exporter:latest
-    container_name: transcendence_node_exporter
-    restart: unless-stopped
-    networks:
-      - transcendence_net
-
-  # cadvisor:
-  #   image: gcr.io/cadvisor/cadvisor:latest
-  #   container_name: transcendence_cadvisor
+  # nginx:
+  #   build:
+  #     context: ./infra/nginx
+  #     dockerfile: Dockerfile
+  #   container_name: transcendence_nginx
   #   restart: unless-stopped
-  #   volumes:
-  #     - /var/run:/var/run:ro
-  #     - /sys:/sys:ro
-  #     - /var/lib/containers:/var/lib/containers:ro
+  #   ports:
+  #     - "8080:80"
+  #     - "8443:443"
+  #   # depends_on:
+  #   #   - frontend
   #   networks:
   #     - transcendence_net
 
-  postgres-exporter:
-    image: docker.io/prometheuscommunity/postgres-exporter:latest
-    container_name: transcendence_postgres_exporter
-    restart: unless-stopped
-    entrypoint: ["sh", "-c"]
-    command:
-      - 'DATA_SOURCE_NAME="postgresql://$${POSTGRES_USER}:$$(cat /run/secrets/postgres_password)@db:5432/$${POSTGRES_DB}?sslmode=disable" /bin/postgres_exporter'
-    env_file:
-      - .env
-    secrets:
-      - postgres_password
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - transcendence_net
+  # node-exporter:
+  #   image: docker.io/prom/node-exporter:latest
+  #   container_name: transcendence_node_exporter
+  #   restart: unless-stopped
+  #   networks:
+  #     - transcendence_net
 
-  redis-exporter:
-    image: docker.io/oliver006/redis_exporter:latest
-    container_name: transcendence_redis_exporter
-    restart: unless-stopped
-    environment:
-      REDIS_ADDR: redis:6379
-      REDIS_PASSWORD_FILE: /run/secrets/redis_exporter_password_json
-    secrets:
-      - redis_exporter_password_json
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - transcendence_net
+  # # cadvisor:
+  # #   image: gcr.io/cadvisor/cadvisor:latest
+  # #   container_name: transcendence_cadvisor
+  # #   restart: unless-stopped
+  # #   volumes:
+  # #     - /var/run:/var/run:ro
+  # #     - /sys:/sys:ro
+  # #     - /var/lib/containers:/var/lib/containers:ro
+  # #   networks:
+  # #     - transcendence_net
 
-  prometheus:
-    image: docker.io/prom/prometheus:latest
-    container_name: transcendence_prometheus
-    restart: unless-stopped
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--web.external-url=/prometheus/'
-      - '--web.route-prefix=/prometheus/'
-    volumes:
-      - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    networks:
-      - transcendence_net
+  # postgres-exporter:
+  #   image: docker.io/prometheuscommunity/postgres-exporter:latest
+  #   container_name: transcendence_postgres_exporter
+  #   restart: unless-stopped
+  #   entrypoint: ["sh", "-c"]
+  #   command:
+  #     - 'DATA_SOURCE_NAME="postgresql://$${POSTGRES_ADMIN_USER}:$$(cat /run/secrets/postgres_admin_password)@postgres:5432/$${POSTGRES_DB}?sslmode=disable" /bin/postgres_exporter'
+  #   env_file:
+  #     - .env
+  #   secrets:
+  #     - postgres_admin_password
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - transcendence_net
 
-  grafana:
-    image: docker.io/grafana/grafana:11.4.0
-    container_name: transcendence_grafana
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
-      GF_SERVER_ROOT_URL: "https://localhost:8443/grafana/"
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-    secrets:
-      - grafana_admin_password
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
-    depends_on:
-      - prometheus
-    networks:
-      - transcendence_net
+  # redis-exporter:
+  #   image: docker.io/oliver006/redis_exporter:latest
+  #   container_name: transcendence_redis_exporter
+  #   restart: unless-stopped
+  #   environment:
+  #     REDIS_ADDR: redis:6379
+  #     REDIS_PASSWORD_FILE: /run/secrets/redis_exporter_password_json
+  #   secrets:
+  #     - redis_exporter_password_json
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - transcendence_net
+
+  # prometheus:
+  #   image: docker.io/prom/prometheus:latest
+  #   container_name: transcendence_prometheus
+  #   restart: unless-stopped
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--web.external-url=/prometheus/'
+  #     - '--web.route-prefix=/prometheus/'
+  #   volumes:
+  #     - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+  #     - prometheus_data:/prometheus
+  #   networks:
+  #     - transcendence_net
+
+  # grafana:
+  #   image: docker.io/grafana/grafana:11.4.0
+  #   container_name: transcendence_grafana
+  #   restart: unless-stopped
+  #   environment:
+  #     GF_SECURITY_ADMIN_USER: admin
+  #     GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+  #     GF_SERVER_ROOT_URL: "https://localhost:8443/grafana/"
+  #     GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+  #   secrets:
+  #     - grafana_admin_password
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #     - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+  #   depends_on:
+  #     - prometheus
+  #   networks:
+  #     - transcendence_net
 
   # frontend:
   #   build:
@@ -169,8 +197,12 @@ services:
   #     - transcendence_net
 
 secrets:
-  postgres_password:
-    file: ./secrets/postgres_password.txt
+  postgres_admin_password:
+    file: ./secrets/postgres_admin_password.txt
+  postgres_ingest_password:
+    file: ./secrets/postgres_ingest_password.txt
+  postgres_readonly_password:
+    file: ./secrets/postgres_readonly_password.txt
   redis_password:
     file: ./secrets/redis_password.txt
   redis_exporter_password_json:

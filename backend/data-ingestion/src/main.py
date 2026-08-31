@@ -1,4 +1,6 @@
-from src import parse_raw_data, process_and_dispatch
+from parser import parse_raw_data
+from dispatcher import process_and_dispatch
+from db_client import init_db_pool, close_db_pool
 
 from websockets.exceptions import ConnectionClosed
 import asyncio
@@ -14,33 +16,42 @@ logging.basicConfig(
 BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
 
 async def run_ingestion():
+	"""Main function to run the data ingestion process"""
+
 	logging.info("Connecting to Binance websockets...")
 
-	while True:
-		try:
-			# Connecting to Binance websockets, adding ping so Binance server doesn't close automatically
-			async with websockets.connect(
-				BINANCE_WS_URL,
-				ping_interval = 20, # Send ping every 20s
-				ping_timeout = 10 # Timeout after 10s
-				) as websocket:
-					logging.info("Connected to Binance websocket!")
+	logging.info("Creating a connection pool to the databse...")
+	await init_db_pool()
 
-					while True:
-						raw_data = await websocket.recv()
+	try:
+		while True:
+			try:
+				# Connecting to Binance websockets, adding ping so Binance server doesn't close automatically
+				async with websockets.connect(
+					BINANCE_WS_URL,
+					ping_interval = 20, # Send ping every 20s
+					ping_timeout = 10 # Timeout after 10s
+					) as websocket:
+						logging.info("Connected to Binance websocket!")
 
-						cleaned_data = parse_raw_data(raw_data)
+						while True:
+							raw_data = await websocket.recv()
 
-						if (cleaned_data):
-							await process_and_dispatch(cleaned_data)
+							cleaned_data = parse_raw_data(raw_data)
 
-		except ConnectionClosed:
-			logging.warning(f"Connection closed. Reconnecting in 2s...")
-			await asyncio.sleep(2)
+							if (cleaned_data):
+								await process_and_dispatch(cleaned_data)
 
-		except Exception as e:
-			logging.error(f"Error: {e}. Reconnecting in 5s...")
-			await asyncio.sleep(5)
+			except ConnectionClosed:
+				logging.warning(f"Connection closed. Reconnecting in 2s...")
+				await asyncio.sleep(2)
+
+			except Exception as e:
+				logging.error(f"Error: {e}. Reconnecting in 5s...")
+				await asyncio.sleep(5)
+	finally:
+		logging.info("Closing the connection pool to the databse...")
+		await close_db_pool()
 
 if __name__ == "__main__":
 	asyncio.run(run_ingestion())
