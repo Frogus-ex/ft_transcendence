@@ -1,3 +1,5 @@
 .env
 secrets/*.txt
 !secrets/*.example
+secrets/*.json
+!secrets/*.example

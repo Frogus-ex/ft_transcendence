@@ -1,22 +1,33 @@
 services:
-  db:
+  postgres:
     image: docker.io/library/postgres:16-alpine
     container_name: transcendence_db
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER}
+      POSTGRES_READONLY_PASSWORD_FILE: /run/secrets/postgres_readonly_password
+
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_HOST: postgres
     secrets:
-      - postgres_password
+      - postgres_admin_password
+      - postgres_ingest_password
+      - postgres_readonly_password
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
+      - ./backend/data-ingestion/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,6 +40,9 @@ services:
     container_name: transcendence_redis
     restart: unless-stopped
     command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
+    environment:
+      REDIS_HOST: redis
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
     secrets:
       - redis_password
     ports:
@@ -52,10 +66,24 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - postgres_ingest_password
+      - redis_password
     depends_on:
       redis:
         condition: service_healthy
-      db:
+      postgres:
         condition: service_healthy
     networks:
       - transcendence_net
@@ -87,13 +115,13 @@ services:
     restart: unless-stopped
     entrypoint: ["sh", "-c"]
     command:
-      - 'DATA_SOURCE_NAME="postgresql://$${POSTGRES_USER}:$$(cat /run/secrets/postgres_password)@db:5432/$${POSTGRES_DB}?sslmode=disable" /bin/postgres_exporter'
+      - 'DATA_SOURCE_NAME="postgresql://$${POSTGRES_ADMIN_USER}:$$(cat /run/secrets/postgres_admin_password)@postgres:5432/$${POSTGRES_DB}?sslmode=disable" /bin/postgres_exporter'
     env_file:
       - .env
     secrets:
-      - postgres_password
+      - postgres_admin_password
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
     networks:
       - transcendence_net
@@ -167,8 +195,12 @@ services:
   #     - transcendence_net
 
 secrets:
-  postgres_password:
-    file: ./secrets/postgres_password.txt
+  postgres_admin_password:
+    file: ./secrets/postgres_admin_password.txt
+  postgres_ingest_password:
+    file: ./secrets/postgres_ingest_password.txt
+  postgres_readonly_password:
+    file: ./secrets/postgres_readonly_password.txt
   redis_password:
     file: ./secrets/redis_password.txt
   redis_exporter_password_json:

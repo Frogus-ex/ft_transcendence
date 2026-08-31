@@ -1,4 +1,5 @@
 # ft_transcendence :
+## <u>Il faudra réecrire toutes les documentations en anglais car beaucoup plus pratique et aussi imposé par le sujet</u>
 
 ## Prérequis
 - Copier `.env.example` vers `.env` (section 2)
@@ -11,10 +12,12 @@ Les mots de passe sensibles (Postgres, Redis, JWT) ne sont pas stockés en clair
 Avant de lancer le projet, génère tes propres secrets locaux :
 
 ```bash
-openssl rand -base64 24 > secrets/postgres_password.txt
-openssl rand -base64 24 > secrets/redis_password.txt
-openssl rand -hex 32 > secrets/jwt_secret.txt
-openssl rand -base64 24 > secrets/grafana_admin_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/postgres_admin_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/postgres_ingest_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/postgres_readonly_password.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/redis_password.txt
+openssl rand -hex 32 | tr -d '\n' > secrets/jwt_secret.txt
+openssl rand -base64 24 | tr -d '\n' > secrets/grafana_admin_password.txt
 #pour generer le mdp du redis exporter au format accepter par celui ci.
 python3 -c "import json pw = open('secrets/redis_password.txt').read().strip()
 json.dump({'redis://redis:6379': pw}, open('secrets/redis_password.json', 'w'))"
@@ -30,6 +33,19 @@ Le certificat utilisé est auto-signé, généré automatiquement au moment du b
 
 ## 2 Lancer le projet
 
+### Automatiquement:
+
+```bash
+make [all] / [setup up] # Compile/build tout le projet
+make down               # Stoppe les conteneurs sans supprimer les volumes
+make fclean             # Stoppe et supprime tous les mots de passe et volumes
+make re                 # Recompile tout le projet
+make logs               # Affiche les logs des conteneurs en temps réel
+make fixlog             # Affiche un log fixe des dernières actions des conteneurs
+make ps                 # Affiche l'état des conteneurs
+```
+
+### Manuellement
 ```bash
 cp .env.example .env
 # éditer .env avec de vraies valeurs (voir section Secrets ci-dessous)
@@ -48,9 +64,9 @@ podman-compose ps    # vérifier que tout est "healthy"
 ## Commandes utiles
 
 ```bash
-podman-compose up -d #(specifie ou non le container a lancer)
-podman-compose logs -f <service>   # suivre les logs d'un service
-podman-compose down                # tout arrêter (ajoutez -v pour supprimer meme les volumes persistant)
+podman-compose up -d                        #(specifie ou non le container a lancer)
+podman-compose logs -f <service>            # suivre les logs d'un service
+podman-compose down                         # tout arrêter (ajoutez -v pour supprimer meme les volumes persistant)
 podman-compose build --no-cache <service>   # rebuild forcé
-podman-compose ps #check les containers en cours
+podman-compose ps                           #check les containers en cours
 ```
