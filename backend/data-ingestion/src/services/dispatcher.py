@@ -1,5 +1,5 @@
-from redis_client import save_to_cache
-from db_client import save_to_db
+from database.redis_client import save_to_cache
+from database.db_client import save_to_db
 
 import time
 import logging

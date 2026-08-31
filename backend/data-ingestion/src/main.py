@@ -1,6 +1,6 @@
-from parser import parse_raw_data
-from dispatcher import process_and_dispatch
-from db_client import init_db_pool, close_db_pool
+from services.parser import parse_raw_data
+from services.dispatcher import process_and_dispatch
+from database.db_client import init_db_pool, close_db_pool
 
 from websockets.exceptions import ConnectionClosed
 import asyncio
