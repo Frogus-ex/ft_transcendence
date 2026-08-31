@@ -88,26 +88,26 @@ services:
     networks:
       - transcendence_net
 
-  # nginx:
-  #   build:
-  #     context: ./infra/nginx
-  #     dockerfile: Dockerfile
-  #   container_name: transcendence_nginx
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8080:80"
-  #     - "8443:443"
-  #   # depends_on:
-  #   #   - frontend
-  #   networks:
-  #     - transcendence_net
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    container_name: transcendence_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    # depends_on:
+    #   - frontend
+    networks:
+      - transcendence_net
 
-  # node-exporter:
-  #   image: docker.io/prom/node-exporter:latest
-  #   container_name: transcendence_node_exporter
-  #   restart: unless-stopped
-  #   networks:
-  #     - transcendence_net
+  node-exporter:
+    image: docker.io/prom/node-exporter:latest
+    container_name: transcendence_node_exporter
+    restart: unless-stopped
+    networks:
+      - transcendence_net
 
   # # cadvisor:
   # #   image: gcr.io/cadvisor/cadvisor:latest
@@ -120,70 +120,70 @@ services:
   # #   networks:
   # #     - transcendence_net
 
-  # postgres-exporter:
-  #   image: docker.io/prometheuscommunity/postgres-exporter:latest
-  #   container_name: transcendence_postgres_exporter
-  #   restart: unless-stopped
-  #   entrypoint: ["sh", "-c"]
-  #   command:
-  #     - 'DATA_SOURCE_NAME="postgresql://$${POSTGRES_ADMIN_USER}:$$(cat /run/secrets/postgres_admin_password)@postgres:5432/$${POSTGRES_DB}?sslmode=disable" /bin/postgres_exporter'
-  #   env_file:
-  #     - .env
-  #   secrets:
-  #     - postgres_admin_password
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - transcendence_net
+  postgres-exporter:
+    image: docker.io/prometheuscommunity/postgres-exporter:latest
+    container_name: transcendence_postgres_exporter
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command:
+      - 'DATA_SOURCE_NAME="postgresql://$${POSTGRES_ADMIN_USER}:$$(cat /run/secrets/postgres_admin_password)@postgres:5432/$${POSTGRES_DB}?sslmode=disable" /bin/postgres_exporter'
+    env_file:
+      - .env
+    secrets:
+      - postgres_admin_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - transcendence_net
 
-  # redis-exporter:
-  #   image: docker.io/oliver006/redis_exporter:latest
-  #   container_name: transcendence_redis_exporter
-  #   restart: unless-stopped
-  #   environment:
-  #     REDIS_ADDR: redis:6379
-  #     REDIS_PASSWORD_FILE: /run/secrets/redis_exporter_password_json
-  #   secrets:
-  #     - redis_exporter_password_json
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   networks:
-  #     - transcendence_net
+  redis-exporter:
+    image: docker.io/oliver006/redis_exporter:latest
+    container_name: transcendence_redis_exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD_FILE: /run/secrets/redis_exporter_password_json
+    secrets:
+      - redis_exporter_password_json
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - transcendence_net
 
-  # prometheus:
-  #   image: docker.io/prom/prometheus:latest
-  #   container_name: transcendence_prometheus
-  #   restart: unless-stopped
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yml'
-  #     - '--web.external-url=/prometheus/'
-  #     - '--web.route-prefix=/prometheus/'
-  #   volumes:
-  #     - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
-  #     - prometheus_data:/prometheus
-  #   networks:
-  #     - transcendence_net
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: transcendence_prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus/'
+      - '--web.route-prefix=/prometheus/'
+    volumes:
+      - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - transcendence_net
 
-  # grafana:
-  #   image: docker.io/grafana/grafana:11.4.0
-  #   container_name: transcendence_grafana
-  #   restart: unless-stopped
-  #   environment:
-  #     GF_SECURITY_ADMIN_USER: admin
-  #     GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
-  #     GF_SERVER_ROOT_URL: "https://localhost:8443/grafana/"
-  #     GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-  #   secrets:
-  #     - grafana_admin_password
-  #   volumes:
-  #     - grafana_data:/var/lib/grafana
-  #     - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
-  #   depends_on:
-  #     - prometheus
-  #   networks:
-  #     - transcendence_net
+  grafana:
+    image: docker.io/grafana/grafana:11.4.0
+    container_name: transcendence_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_SERVER_ROOT_URL: "https://localhost:8443/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    secrets:
+      - grafana_admin_password
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - transcendence_net
 
   # frontend:
   #   build:
