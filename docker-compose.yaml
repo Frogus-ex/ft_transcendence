@@ -81,17 +81,6 @@ services:
     networks:
       - transcendence_net
 
-  # cadvisor:
-  #   image: gcr.io/cadvisor/cadvisor:latest
-  #   container_name: transcendence_cadvisor
-  #   restart: unless-stopped
-  #   volumes:
-  #     - /var/run:/var/run:ro
-  #     - /sys:/sys:ro
-  #     - /var/lib/containers:/var/lib/containers:ro
-  #   networks:
-  #     - transcendence_net
-
   postgres-exporter:
     image: docker.io/prometheuscommunity/postgres-exporter:latest
     container_name: transcendence_postgres_exporter
@@ -154,6 +143,15 @@ services:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
+    networks:
+      - transcendence_net
+
+  webhook-receiver:
+    image: docker.io/mendhak/http-https-echo:33
+    container_name: transcendence_webhook_receiver
+    restart: unless-stopped
+    environment:
+      HTTP_PORT: 8080
     networks:
       - transcendence_net
 
