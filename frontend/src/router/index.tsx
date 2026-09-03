@@ -3,10 +3,8 @@ import MainLayout from "../layouts/MainLayout";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import MarketsPage from "../pages/MarketsPage";
-import FriendsPage from "../pages/FriendsPage";
-import WalletPage from "../pages/WalletPage";
+import ContactsPage from "../pages/ContactsPage";
 import ProfilePage from "../pages/ProfilePage";
-import DashboardPage from "../pages/DashboardPage";
 
 const router = createBrowserRouter([
   {
@@ -15,10 +13,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
-      { path: "dashboard", element: <DashboardPage /> },
-      { path: "wallet", element: <WalletPage /> },
-      { path: "friends", element: <FriendsPage /> },
       { path: "profile", element: <ProfilePage /> },
+      { path: "contacts", element: <ContactsPage /> },
       { path: "markets", element: <MarketsPage /> },
     ],
   },

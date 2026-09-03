@@ -3,13 +3,15 @@ import { useState } from "react";
 type TooltipProps = {
   children: React.ReactNode;
   text: string;
+  className?: string;
 };
 
-function Tooltip({ children, text }: TooltipProps) {
+function Tooltip({ children, text, className = "" }: TooltipProps) {
   const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div
-      className="relative inline-block"
+      className={"relative inline-block " + className}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

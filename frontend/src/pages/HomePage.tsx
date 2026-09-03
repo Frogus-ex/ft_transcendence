@@ -8,11 +8,16 @@ import {
 } from "lucide-react";
 import Button from "../components/Button";
 import Card from "../components/Card";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useOutletContext } from "react-router";
+
+type OutletContextType = {
+  isLoggedIn: boolean;
+  setIsLoggedIn: (value: boolean) => void;
+};
 
 function HomePage() {
   const navigate = useNavigate();
-
+  const { isLoggedIn } = useOutletContext<OutletContextType>();
   return (
     <main className="flex-1 flex flex-col">
       <div className="flex-1">
@@ -27,14 +32,25 @@ function HomePage() {
               learn the financial markets, track your performance, and connect
               with the community — without ever risking real money.
             </p>
-            <Button
-              variant="primary"
-              size="large"
-              type="button"
-              onClick={() => navigate("/profile")}
-            >
-              Get Started
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                variant="primary"
+                size="large"
+                type="button"
+                onClick={() => navigate("/profile")}
+              >
+                Get Started
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="large"
+                type="button"
+                onClick={() => navigate("/login")}
+              >
+                Get Started
+              </Button>
+            )}
           </div>
           <div className="flex-shrink-0">
             <TrendingUp size={220} className="text-green-500 opacity-80" />
@@ -94,14 +110,14 @@ function HomePage() {
           </div>
           <div className="flex flex-col gap-2">
             <span className="text-white font-medium mb-1">Navigation</span>
-            <Link to="/dashboard" className="text-sm hover:text-white">
-              Dashboard
+            <Link to="/profile" className="text-sm hover:text-white">
+              Profile
             </Link>
             <Link to="/markets" className="text-sm hover:text-white">
               Markets
             </Link>
-            <Link to="/friends" className="text-sm hover:text-white">
-              Friends
+            <Link to="/contacts" className="text-sm hover:text-white">
+              Contacts
             </Link>
           </div>
           <div className="flex flex-col gap-2">
