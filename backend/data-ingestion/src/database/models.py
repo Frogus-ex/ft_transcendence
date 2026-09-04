@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import Index, Numeric, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
-from orm_db import Base
+from .orm_db import Base
 
 class Ticker(Base):
     __tablename__ = "market_ticks"
@@ -16,7 +16,7 @@ class Ticker(Base):
 
     # For index (optimization)
     __table_args__ = (
-        Index("idx_ticks_symbol_timestamp", "symbol", timestamp.desc())
+        Index("idx_ticks_symbol_timestamp", "symbol", timestamp.desc()),
     )
 
     def __repr__(self) -> str:

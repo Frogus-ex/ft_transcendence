@@ -1,4 +1,3 @@
-import logging
 from typing import AsyncGenerator
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import (
@@ -7,13 +6,14 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from config import DB_URL
+import logging
 
-logger = logging.getLogger(__name__)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 # Creating the async engine for the whole process
 engine = create_async_engine(
     DB_URL,
-    echo=True,
+    echo=False,
     pool_size=10,
     max_overflow=20,
 )
