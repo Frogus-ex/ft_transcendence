@@ -6,3 +6,6 @@ websockets==17.0.1
 # Database (Redis & PostgreSQL)
 redis==8.1.0
 asyncpg==0.31.0
+
+# ORM for database (SQLAlchemy)
+sqlalchemy[asyncio]>=2.0.0
