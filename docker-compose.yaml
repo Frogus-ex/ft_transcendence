@@ -227,7 +227,6 @@ services:
   #   networks:
   #     - transcendence_net
 
->>>>>>> 16843c4 (<feature nginx>: creation of https process and configuration of nginx waiting for proper frontend dev)
 secrets:
   postgres_admin_password:
     file: ./secrets/postgres_admin_password.txt
