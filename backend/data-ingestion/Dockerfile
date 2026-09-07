@@ -18,6 +18,10 @@ RUN apk upgrade --no-cache && \
     && pip install --no-cache-dir -r requirements.txt \
     && apk del .build-deps
 
-COPY src/ ./src
+# Creating non-root user for security
+RUN adduser -D -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
 
-CMD ["python", "src/main.py"]
+COPY --chown=appuser:appuser . .
+
+CMD ["python", "-m", "src.main"]
