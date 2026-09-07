@@ -61,6 +61,7 @@ async def   save_to_db(cleaned_data: dict) -> None:
             )
             session.add(tick)
             await session.commit()
+            logger.info(f"Saved to Postgres: {cleaned_data['symbol']} -> ${cleaned_data['price']}")
         except Exception as e:
             await session.rollback()
             logger.error(f"Error while saving with SQLAlchemy: {e}")
