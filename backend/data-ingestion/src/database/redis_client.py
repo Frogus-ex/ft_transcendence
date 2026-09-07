@@ -1,25 +1,14 @@
 import json
 import redis
-import os
 import logging
 from datetime import datetime
+from config import (
+    REDIS_HOST,
+    REDIS_PORT,
+    REDIS_PASSWORD,
+)
 
 logger = logging.getLogger(__name__)
-
-# Getting environment from Docker compose
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = int(os.getenv("REDIS_PORT"))
-password_file_path = os.getenv("REDIS_PASSWORD_FILE")
-
-if password_file_path and os.path.exists(password_file_path):
-    try:
-        with open(password_file_path, "r", encoding="utf-8") as p:
-            REDIS_PASSWORD = p.read().strip()
-    except OSError as exc:
-        logger.warning(f"Unable to read Redis password file {password_file_path}: {exc}")
-        REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-else:
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 
 # Initializing Redis client
 pool = redis.ConnectionPool(
