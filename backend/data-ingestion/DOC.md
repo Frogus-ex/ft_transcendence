@@ -8,6 +8,7 @@ The ingestion backend is an ETL pipeline (Extract, Transform, Load). It receives
 src/
 ├── main.py
 ├── config.py
+├── tasks.py
 ├── scripts/
 │   └── init.sh
 ├── services/
@@ -83,6 +84,10 @@ To limit PostgreSQL writes, it stores a record only when both conditions are met
 
 This keeps the real-time cache current while reducing duplicate database records and unnecessary database traffic.
 
+### `tasks.py`
+
+`tasks.py` calculates aggregated prices across multiple time scales (for example: 1s, 1m, 5m, 1h). It reads recent tick records, computes OHLC (open/high/low/close) and volume aggregates for the configured intervals, and writes aggregated results back to the database using the helpers in [backend/data-ingestion/src/database/db_client.py](backend/data-ingestion/src/database/db_client.py). Data scientists extending `tasks.py` should review the persistence patterns in `save_to_db()` and follow existing transaction/session conventions.
+
 ### `database/redis_client.py`
 
 This module creates a Redis connection pool using the configuration loaded by `config.py`.
@@ -100,6 +105,8 @@ This module manages the PostgreSQL connection pool and persists ticker data.
 `save_to_db()` creates a `Ticker` ORM object from the cleaned dictionary, adds it to an asynchronous SQLAlchemy session, and commits the transaction. If the write fails, the session is rolled back and the error is logged.
 
 `close_db_pool()` closes the pool cleanly when the application shuts down.
+
+The aggregation tasks in [backend/data-ingestion/src/tasks.py](backend/data-ingestion/src/tasks.py) call `save_to_db()` and other helpers from this module to persist computed aggregates; review [backend/data-ingestion/src/database/db_client.py](backend/data-ingestion/src/database/db_client.py) for transaction and session patterns to follow.
 
 ### `database/orm_db.py`
 
@@ -119,6 +126,8 @@ This module defines the database schema used by SQLAlchemy. The `Ticker` class m
 Each ticker record contains an auto-incrementing identifier, symbol, price, quantity, trade timestamp, and automatically generated creation timestamp. Prices and quantities use `Numeric(18, 8)` to preserve decimal precision.
 
 The `idx_ticks_symbol_timestamp` index improves queries that filter by symbol and sort by the most recent timestamp.
+
+`tasks.py` relies on the `Ticker` schema for both raw ticks and aggregated records. See [backend/data-ingestion/src/database/models.py](backend/data-ingestion/src/database/models.py) to understand column types (for example `Numeric(18, 8)`) and existing indexes before designing new aggregate tables or altering existing ones.
 
 ### `scripts/init.sh`
 
