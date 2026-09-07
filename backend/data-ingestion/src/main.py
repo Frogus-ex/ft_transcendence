@@ -17,10 +17,10 @@ BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
 async def run_ingestion():
 	"""Main function to run the data ingestion process"""
 
-	logging.info("Connecting to Binance websockets...")
-
 	logging.info("Creating a connection pool to the databse...")
 	await init_db_pool()
+
+	logging.info("Connecting to Binance websockets...")
 
 	try:
 		while True:
@@ -42,7 +42,7 @@ async def run_ingestion():
 								await process_and_dispatch(cleaned_data)
 
 			except ConnectionClosed:
-				logging.warning(f"Connection closed. Reconnecting in 2s...")
+				logging.warning("Connection closed. Reconnecting in 2s...")
 				await asyncio.sleep(2)
 
 			except Exception as e:

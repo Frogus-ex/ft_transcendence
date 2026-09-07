@@ -36,7 +36,7 @@ services:
       - transcendence_net
 
   redis:                                        
-    image: docker.io/library/redis:7-alpine
+    image: docker.io/library/redis:6-alpine
     container_name: transcendence_redis
     restart: unless-stopped
     command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
@@ -69,6 +69,37 @@ services:
     environment:
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - postgres_ingest_password
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
+  celery:
+    build:
+      context: ./backend/data-ingestion
+      dockerfile: Dockerfile
+    container_name: transcendence_celery
+    restart: unless-stopped
+    command: celery -A src.tasks worker --loglevel=INFO
+    env_file:
+      - .env
+    environment:
+      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER}
+      POSTGRES_READONLY_PASSWORD_FILE: /run/secrets/postgres_readonly_password
 
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PORT: ${POSTGRES_PORT}
@@ -185,16 +216,16 @@ services:
     networks:
       - transcendence_net
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: transcendence_frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT}:5173"
-    networks:
-      - transcendence_net
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: transcendence_frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${FRONTEND_PORT}:5173"
+  #   networks:
+  #     - transcendence_net
 
 secrets:
   postgres_admin_password:
