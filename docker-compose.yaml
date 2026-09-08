@@ -119,6 +119,38 @@ services:
     networks:
       - transcendence_net
 
+  api-server:
+    build:
+      context: ./backend/api-server
+      dockerfile: Dockerfile
+    container_name: transcendence_api_server
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER}
+      POSTGRES_READONLY_PASSWORD_FILE: /run/secrets/postgres_readonly_password
+
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - postgres_ingest_password
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
   nginx:
     build:
       context: ./infra/nginx
