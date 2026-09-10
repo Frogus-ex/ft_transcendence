@@ -27,6 +27,7 @@ The files are grouped by responsibility:
 
 - `main.py`: runs the ingestion loop and manages the WebSocket connection.
 - `config.py`: loads application settings and secrets.
+- `tasks.py`: Celery worker for calculating heavy data in background.
 - `scripts/init.sh`: initializes the PostgreSQL schema and application users.
 - `services/`: parses incoming data and dispatches it to external services.
 - `database/`: provides Redis access, PostgreSQL access, and SQLAlchemy definitions.
@@ -39,6 +40,7 @@ The files are grouped by responsibility:
 3. `dispatcher.py` writes the latest value to Redis and periodically stores a changed price in PostgreSQL.
 4. `redis_client.py` stores the current ticker as JSON in Redis.
 5. `db_client.py` stores selected ticker records through the SQLAlchemy ORM.
+6. `tasks.py` calculates the prices for technical indicators from cache/database
 
 ## Application Files
 
@@ -86,7 +88,7 @@ This keeps the real-time cache current while reducing duplicate database records
 
 ### `tasks.py`
 
-`tasks.py` calculates aggregated prices across multiple time scales (for example: 1s, 1m, 5m, 1h). It reads recent tick records, computes OHLC (open/high/low/close) and volume aggregates for the configured intervals, and writes aggregated results back to the database using the helpers in [backend/data-ingestion/src/database/db_client.py](backend/data-ingestion/src/database/db_client.py). Data scientists extending `tasks.py` should review the persistence patterns in `save_to_db()` and follow existing transaction/session conventions.
+`tasks.py` calculates aggregated prices across multiple time scales (for example: 1s, 1m, 5m, 1h). It reads recent tick records, computes OHLC (open/high/low/close) and volume aggregates for the configured intervals, and writes aggregated results back to the database using the helpers in `db_client.py`. Data scientists extending `tasks.py` should review the persistence patterns in `save_to_db()` and follow existing transaction/session conventions.
 
 ### `database/redis_client.py`
 
@@ -106,7 +108,7 @@ This module manages the PostgreSQL connection pool and persists ticker data.
 
 `close_db_pool()` closes the pool cleanly when the application shuts down.
 
-The aggregation tasks in [backend/data-ingestion/src/tasks.py](backend/data-ingestion/src/tasks.py) call `save_to_db()` and other helpers from this module to persist computed aggregates; review [backend/data-ingestion/src/database/db_client.py](backend/data-ingestion/src/database/db_client.py) for transaction and session patterns to follow.
+The aggregation tasks in `tasks.py` call `save_to_db()` and other helpers from this module to persist computed aggregates; review `db_client.py` for transaction and session patterns to follow.
 
 ### `database/orm_db.py`
 
@@ -127,7 +129,7 @@ Each ticker record contains an auto-incrementing identifier, symbol, price, quan
 
 The `idx_ticks_symbol_timestamp` index improves queries that filter by symbol and sort by the most recent timestamp.
 
-`tasks.py` relies on the `Ticker` schema for both raw ticks and aggregated records. See [backend/data-ingestion/src/database/models.py](backend/data-ingestion/src/database/models.py) to understand column types (for example `Numeric(18, 8)`) and existing indexes before designing new aggregate tables or altering existing ones.
+`tasks.py` relies on the `Ticker` schema for both raw ticks and aggregated records. See `models.py` to understand column types (for example `Numeric(18, 8)`) and existing indexes before designing new aggregate tables or altering existing ones.
 
 ### `scripts/init.sh`
 
@@ -196,10 +198,10 @@ Inside `psql`, use `\dt` to list tables. Use `reader_user` for read-only queries
 ### Accessing Redis
 
 ```bash
-podman exec -it transcendence_redis redis-cli -h REDIS_HOST -p REDIS_PORT -a REDIS_PASSWORD
+podman exec -it transcendence_redis redis-cli -h REDIS_HOST -p REDIS_PORT
 ```
 
-For local use, you can connect without `-a` and authenticate from inside the Redis shell:
+For local use, you can connect with `-a` and authenticate (-a REDIS_PASSWORD), or from inside the Redis shell:
 
 ```text
 AUTH REDIS_PASSWORD

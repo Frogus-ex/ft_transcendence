@@ -34,7 +34,7 @@ app.conf.update(
 
 """
 
-# Mandatory: use the decorator @app.task to use Celery, otherwise very slow and it will be stuck
+# Mandatory: use the decorator @app.task to use Celery, otherwise very slow and the execution will be blocked
 @app.task
 def function_to_calculate():
     """Write your function to calculate prices"""
