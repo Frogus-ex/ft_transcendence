@@ -22,19 +22,22 @@ class Ticker(Base):
     def __repr__(self) -> str:
         return f"<Ticker {self.symbol} - Price: {self.price} - Quantity: {self.quantity} at {self.timestamp}>"
 
-class MarketIndicator(Base):
-    __tablename__ = "market_indicators"
+class MarketCandle(Base):
+    __tablename__ = "market_candles"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    symbol: Mapped[str] = mapped_column(String(20), nullable=False)
-    indicator_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    value: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(20), index=True, nullable=False)
+    interval: Mapped[str] = mapped_column(String(5), nullable=False)
+    time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
+    open: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    high: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    low: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    close: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    volume: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
 
-    # For index (optimization)
     __table_args__ = (
-        Index("idx_indicators_symbol_timestamp", "symbol", timestamp.desc()),
+        Index("idx_candles_symbol_time", "symbol", time.desc()),
     )
 
     def __repr__(self) -> str:
-        return f"<Ticker {self.symbol} - Indicator: {self.indicator_name} - Value: {self.value} at {self.timestamp}>"
+        return f"<Ticker {self.symbol} - Interval: {self.interval} at {self.time}>"
