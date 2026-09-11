@@ -141,8 +141,8 @@ Before executing the SQL, the script loads the ingestion and read-only passwords
 
 The SQL block performs the following operations:
 
-- creates the `market_ticks` table if it does not already exist;
-- creates the `idx_ticks_symbol_timestamp` index for queries by symbol and descending timestamp;
+- creates the `market_ticks` and `market_candles` tables if it does not already exist;
+- creates the `idx_ticks_symbol_timestamp` and `idx_candles_symbol_time` indexes for queries by symbol and descending timestamp;
 - creates the ingestion user if necessary, or updates its password if it already exists;
 - grants the ingestion user permission to connect, use the public schema, and select or insert table data;
 - grants the ingestion user sequence permissions required for auto-incrementing IDs;

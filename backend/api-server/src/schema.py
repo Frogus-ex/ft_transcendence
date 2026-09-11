@@ -11,10 +11,14 @@ class TickerValidation(BaseModel):
     quantity: Decimal
     timestamp: datetime
 
-class IndicatorValidation(BaseModel):
+class CandleValidation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     symbol: str
-    indicator_name: str
-    value: Decimal
-    timestamp: datetime
+    interval: str
+    time: datetime
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    volume: Decimal

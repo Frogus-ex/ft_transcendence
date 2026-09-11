@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as aredis
 
-from database import Ticker, MarketIndicator, get_async_session
+from database import Ticker, MarketCandle, get_async_session
 from schema import TickerValidation, IndicatorValidation
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 
@@ -116,28 +116,6 @@ async def   get_historical_ticks(
     result = await session.execute(query)
     ticks = result.scalars().all()
     return ticks
-
-# HTTP Indicators, sub-graph (Database)
-@app.get("/api/indicators/{symbol}", response_model=List[IndicatorValidation])
-async def   get_historical_indicators(
-    symbol: str,
-    indicator_name: str = "RSI_14",
-    limit: int = 100,
-    session: AsyncSession = Depends(get_async_session)
-):
-    """Collect the last x indicators (default 100) from the table "market_indicators"."""
-
-    query = (
-        select(MarketIndicator)
-        .where(MarketIndicator.symbol == symbol.upper(),
-               MarketIndicator.indicator_name == indicator_name.upper()
-        )
-        .order_by(MarketIndicator.timestamp.desc())
-        .limit(limit)
-    )
-    result = await session.execute(query)
-    indicators = result.scalars().all()
-    return indicators
 
 # WebSocket (Cache)
 @app.websoclets("/ws/markets/{symbol}")

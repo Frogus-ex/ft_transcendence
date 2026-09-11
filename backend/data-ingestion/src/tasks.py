@@ -30,7 +30,7 @@ app.conf.update(
 1- Read DOC.md
 2- Use either Redis cache or Postgres database values (depends on what scale you want to calculate,
     see DOC.md how to use/access the services) to calculate the prices.
-3- Store the calculated data into "market_indicators" via SQLAlchemy (take db_client.py as example and see in models.py for reference)
+3- Store the calculated data into "market_candles" (open, close...) via SQLAlchemy (take db_client.py as example and see in models.py for reference)
 
 """
 
