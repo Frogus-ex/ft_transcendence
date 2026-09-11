@@ -1,6 +1,6 @@
 import asyncio
-import json
 import logging
+from decimal import Decimal
 from contextlib import asynccontextmanager
 from typing import List, Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
@@ -88,7 +88,10 @@ app = FastAPI(title="Market Data API", lifespan=lifespan)
 # For watchlist
 @app.get("/api/markets")
 async def   get_watchlist(
-
+    symbol: str,
+    last_price: Decimal,
+    last_day_change: Decimal,
+    session: AsyncSession = Depends(get_async_session)
 ):
     """Gets the latest price of the currency and compare it to the latest price from 24-hrs ago"""
     pass
