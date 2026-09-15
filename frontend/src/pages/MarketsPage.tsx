@@ -1,4 +1,6 @@
+import OrderTicket from "../components/OrderTicket";
+
 function MarketsPage() {
-  return <h1>Markets</h1>;
+  return <OrderTicket />;
 }
 export default MarketsPage;
