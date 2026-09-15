@@ -1,18 +1,18 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
-from connection_manager import manager
+from utils import manager
 import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/ws/markets", tags=["WebSockets"])
+router = APIRouter(prefix="/ws", tags=["WebSockets"])
 
 # WebSocket (Cache)
-@router.websocket("/{symbol}")
+@router.websocket("/markets/{symbol}")
 async def   ws_market_data(websocket: WebSocket):
     """Opening a websocket pipeline and pushing ticks from Redis (every s/ms)"""
 
     logger.info("Opening websocket pipeline...")
-    await websocket.accept()
+    await websocket.accept(websocket)
     logging.info("Websocket pipeline is now opened!")
 
     try:

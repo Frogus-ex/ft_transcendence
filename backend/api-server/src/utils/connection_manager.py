@@ -13,7 +13,7 @@ class ConnectionManager:
         self.active_connections.add(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        self.active_connections.discard(websocket)
 
     async def broadcast(self, message: str):
         # Wrapping the set into a list so it won't crash if exception is caught
@@ -23,4 +23,4 @@ class ConnectionManager:
             except Exception:
                 self.active_connections.remove(connection)
 
-manager = ConnectionManager
+manager = ConnectionManager()

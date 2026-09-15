@@ -5,8 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Ticker, MarketCandle, get_async_session
-from schema import CandleValidation
-
+from utils import CandleValidation
 router = APIRouter(prefix="/api/markets", tags=["Markets"])
 
 # For watchlist
