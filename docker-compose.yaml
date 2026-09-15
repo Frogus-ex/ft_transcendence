@@ -141,7 +141,7 @@ services:
       REDIS_PORT: ${REDIS_PORT}
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
     secrets:
-      - postgres_ingest_password
+      - postgres_readonly_password
       - redis_password
     depends_on:
       redis:

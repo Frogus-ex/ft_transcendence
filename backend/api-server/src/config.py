@@ -6,11 +6,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Postgres environment
-POSTGRES_USER = os.getenv("POSTGRES_INGEST_USER")
+POSTGRES_USER = os.getenv("POSTGRES_READONLY_USER")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
 POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
-password_file_path_postgres = os.getenv("POSTGRES_INGEST_PASSWORD_FILE")
+password_file_path_postgres = os.getenv("POSTGRES_READONLY_PASSWORD_FILE")
 
 if password_file_path_postgres and os.path.exists(password_file_path_postgres):
     try:
@@ -18,9 +18,9 @@ if password_file_path_postgres and os.path.exists(password_file_path_postgres):
             POSTGRES_PASSWORD = p.read().strip()
     except OSError as exc:
         logger.warning(f"Unable to read Postgres password file {password_file_path_postgres}: {exc}")
-        POSTGRES_PASSWORD = os.getenv("POSTGRES_INGEST_PASSWORD")
+        POSTGRES_PASSWORD = os.getenv("POSTGRES_READONLY_PASSWORD")
 else:
-    POSTGRES_PASSWORD = os.getenv("POSTGRES_INGEST_PASSWORD")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_READONLY_PASSWORD")
 
 if not POSTGRES_USER or not POSTGRES_DB or not POSTGRES_PASSWORD:
     logger.warning(
