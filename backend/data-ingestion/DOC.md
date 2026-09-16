@@ -1,6 +1,48 @@
 # Data Ingestion Backend
 
-The ingestion backend is an ETL pipeline (Extract, Transform, Load). It receives real-time market data from Binance through a WebSocket, validates and normalizes the data, then sends it to Redis and PostgreSQL.
+The ingestion backend follows an EtLT pipeline (Extract, Transform-Light, Load, Transform-Heavy). It connects to the Binance WebSocket, extracts live market events, performs a lightweight validation and normalization step, stores the cleaned data in Redis and PostgreSQL, and then performs heavier transformations later to generate derived market data for the frontend.
+
+## Why?
+
+This architecture was chosen to balance speed, data quality, and storage efficiency for a real-time financial data stream.
+
+For streaming products such as stock and crypto market data, the volume is high and the latency requirement is strict. A full ETL pipeline can become a bottleneck because each message is processed and transformed before it reaches storage, which slows the ingestion path and increases processing overhead under heavy load. In contrast, ELT is excellent for raw, high-volume ingestion because it keeps most data in storage and defers transformation. However, for this project, I do not want to store every unfiltered message as-is because the API stream contains noisy, redundant, or malformed payloads that are not useful for downstream analytics or frontend display.
+
+The EtLT approach gives the best trade-off:
+
+- Extract: fetch live trade data from the Binance API.
+- Transform-Light: clean, validate, and normalize only the fields that matter (`symbol`, `price`, `quantity`, `timestamp`).
+- Load: persist the lightweight cleaned data into Redis and PostgreSQL for fast access and persistence.
+- Transform-Heavy: compute aggregates such as OHLC candles in a separate processing stage for analytics and visualization.
+
+### Pipeline comparison
+
+| Specification | ETL | ELT | EtLT |
+| --- | --- | --- | --- |
+| Fast ingestion | ❌ Slow when handling large real-time streams | ✅ Very fast raw ingestion | ✅ Fast, because only light validation happens in real time |
+| Scalable for streaming data | ❌ Harder to scale under constant high-frequency input | ✅ Good for large-scale raw ingestion | ✅ Good balance for live streams with later aggregation |
+| Data quality before storage | ✅ Strong validation before writing | ⚠️ Often stores raw/unfiltered data first | ✅ Good validation and filtering before persistence |
+| Storage efficiency | ✅ Efficient, but only after heavy transformation | ❌ Can require more storage for raw data | ✅ More efficient than ELT because only useful fields are stored |
+| Flexibility for later analysis | ⚠️ Lower flexibility because transformation happens early | ✅ Very flexible for downstream analysis | ✅ Flexible, while still keeping ingestion efficient |
+| Compute cost during ingestion | ❌ High CPU cost per message | ✅ Lower cost at ingestion, higher cost later | ✅ Lower real-time cost, while heavy processing is deferred |
+| Good for real-time dashboards | ❌ Weak latency for high-frequency updates | ✅ Good for streaming ingestion | ✅ Best fit for real-time dashboards with derived summaries |
+| Complexity | ⚠️ Simpler conceptual flow | ⚠️ Simpler ingestion, but more downstream complexity | ⚠️ Slightly more complex, but manageable and structured |
+| Fit for this project | ❌ Not ideal for live market ingestion | ⚠️ Possible, but less efficient for data quality goals | ✅ Best fit for this project |
+
+### Why EtLT is the most suitable choice here
+
+- ✅ Real-time market data requires low-latency ingestion.
+- ✅ Light validation prevents corrupted or incomplete data from polluting storage.
+- ✅ Storing only useful fields reduces database size and unnecessary writes.
+- ✅ Heavy calculations are deferred to dedicated processing tasks, which keeps the streaming layer efficient.
+- ✅ The frontend receives cleaner, derived market data instead of raw tick noise.
+- ✅ This design is easier to scale when more market pairs, indicators, or aggregation windows are added later.
+
+### When each pipeline is preferred
+
+- ETL is preferred when the data is already structured and needs governance before storage.
+- ELT is preferred when raw ingestion speed is the priority and data is transformed later in the warehouse.
+- EtLT is preferred when data must be validated and reduced in real time, but derived analytics can still be computed later.
 
 ## Project Structure
 
@@ -35,12 +77,12 @@ The files are grouped by responsibility:
 
 ## Data Flow
 
-1. `main.py` connects to Binance's BTCUSDT trade stream.
-2. `parser.py` converts each raw WebSocket message into a normalized Python dictionary.
-3. `dispatcher.py` writes the latest value to Redis and periodically stores a changed price in PostgreSQL.
-4. `redis_client.py` stores the current ticker as JSON in Redis.
-5. `db_client.py` stores selected ticker records through the SQLAlchemy ORM.
-6. `tasks.py` calculates the prices for technical indicators from cache/database
+1. `main.py` connects to the Binance BTCUSDT WebSocket stream and listens for live trade events.
+2. `parser.py` performs a light transformation by validating and normalizing the raw JSON payload into a minimal, useful structure.
+3. `dispatcher.py` writes the latest value to Redis and periodically writes filtered price updates to PostgreSQL.
+4. `redis_client.py` stores the current ticker as JSON in Redis for low-latency access.
+5. `db_client.py` persists the cleaned tick-level records through the SQLAlchemy ORM.
+- `tasks.py` performs the heavy transformation step by aggregating tick data into higher-level market summaries for the frontend.
 
 ## Application Files
 
@@ -88,7 +130,7 @@ This keeps the real-time cache current while reducing duplicate database records
 
 ### `tasks.py`
 
-`tasks.py` calculates aggregated prices across multiple time scales (for example: 1s, 1m, 5m, 1h). It reads recent tick records, computes OHLC (open/high/low/close) and volume aggregates for the configured intervals, and writes aggregated results back to the database using the helpers in `db_client.py`. Data scientists extending `tasks.py` should review the persistence patterns in `save_to_db()` and follow existing transaction/session conventions.
+`tasks.py` calculates aggregated market summaries across multiple time scales (for example: 1s, 1m, 5m, 1h). It reads recent tick records, computes grouped aggregates for the configured intervals, and writes the derived results back to the database using the helpers in `db_client.py`. Data scientists extending `tasks.py` should review the persistence patterns in `save_to_db()` and follow existing transaction/session conventions.
 
 ### `database/redis_client.py`
 
@@ -108,7 +150,7 @@ This module manages the PostgreSQL connection pool and persists ticker data.
 
 `close_db_pool()` closes the pool cleanly when the application shuts down.
 
-The aggregation tasks in `tasks.py` call `save_to_db()` and other helpers from this module to persist computed aggregates; review `db_client.py` for transaction and session patterns to follow.
+The aggregation tasks in `tasks.py` call `save_to_db()` and other helpers from this module to persist derived market summaries; review `db_client.py` for transaction and session patterns to follow.
 
 ### `database/orm_db.py`
 

@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
-from connection_manager import manager
+from utils import manager
 from routers import markets, websockets
 
 logging.basicConfig(
@@ -54,6 +54,7 @@ async def   lifespan(app: FastAPI):
                 if message["type"] == "message":
                     try:
                         data = message["data"].decode("utf-8")
+                        logging.info(f"Redis Test: {data}")
                         # Redis send the message to all clients of manager
                         await manager.broadcast(message=data)
                     except Exception as e:
