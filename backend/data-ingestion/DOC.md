@@ -136,7 +136,7 @@ This keeps the real-time cache current while reducing duplicate database records
 
 This module creates a Redis connection pool using the configuration loaded by `config.py`.
 
-`save_to_cache()` stores each ticker under a key such as `ticker:BTCUSDT`. The record is serialized as JSON before it is written. Because Python's `datetime` objects are not JSON serializable by default, `date_time_encoder()` converts timestamps to ISO 8601 strings.
+`save_to_cache_and_publish()` stores each ticker under a key such as `ticker:BTCUSDT`. The record is serialized as JSON before it is written. Because Python's `datetime` objects are not JSON serializable by default, `date_time_encoder()` converts timestamps to ISO 8601 strings.
 
 Redis connection errors are ignored so a temporary cache failure does not stop the ingestion pipeline. Other Redis errors are logged.
 
@@ -144,11 +144,11 @@ Redis connection errors are ignored so a temporary cache failure does not stop t
 
 This module manages the PostgreSQL connection pool and persists ticker data.
 
-`init_db_pool()` creates an asynchronous `asyncpg` pool with a maximum of 10 connections. Reusing pooled connections avoids opening and closing a new database connection for every operation.
+`init_db_pool()` creates a psycopg (psycopg3) connection pool with a maximum of 10 connections. Reusing pooled connections avoids opening and closing a new database connection for every operation; SQLAlchemy's engine and session are used for ORM writes.
 
-`save_to_db()` creates a `Ticker` ORM object from the cleaned dictionary, adds it to an asynchronous SQLAlchemy session, and commits the transaction. If the write fails, the session is rolled back and the error is logged.
+`save_to_db()` creates a `Ticker` ORM object from the cleaned dictionary, adds it to a synchronous SQLAlchemy session, and commits the transaction. If the write fails, the session is rolled back and the error is logged.
 
-`close_db_pool()` closes the pool cleanly when the application shuts down.
+`close_db_pool()` closes the psycopg pool cleanly when the application shuts down.
 
 The aggregation tasks in `tasks.py` call `save_to_db()` and other helpers from this module to persist derived market summaries; review `db_client.py` for transaction and session patterns to follow.
 
@@ -156,10 +156,10 @@ The aggregation tasks in `tasks.py` call `save_to_db()` and other helpers from t
 
 This module contains the shared SQLAlchemy setup:
 
-- `engine` creates the asynchronous connection engine using `DB_URL`;
-- `AsyncSessionLocal` creates asynchronous database sessions;
+- `engine` creates the synchronous connection engine using `DB_URL`;
+- `SessionLocal` creates synchronous database sessions;
 - `Base` is the declarative base class used by ORM models;
-- `get_async_session()` provides a session and closes it automatically when the operation finishes.
+- `get_session()` provides a session and closes it automatically when the operation finishes.
 
 The engine is configured with a pool size of 10 and can temporarily create up to 20 additional connections through `max_overflow`.
 

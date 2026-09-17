@@ -4,10 +4,12 @@ from config import (
     REDIS_PORT,
     REDIS_PASSWORD,
 )
+from urllib.parse import quote_plus
 
 if REDIS_PASSWORD:
-    broker_url = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
-    backend_url = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/1"
+    enc = quote_plus(REDIS_PASSWORD)
+    broker_url = f"redis://:{enc}@{REDIS_HOST}:{REDIS_PORT}/0"
+    backend_url = f"redis://:{enc}@{REDIS_HOST}:{REDIS_PORT}/1"
 else:
     broker_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
     backend_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
@@ -39,3 +41,27 @@ app.conf.update(
 def function_to_calculate():
     """Write your function to calculate prices"""
     pass
+
+
+# # Ensure modules that declare tasks are imported so decorators run and tasks register.
+# # Try both top-level and `src.`-prefixed imports to handle different PYTHONPATH/entrypoints.
+# import logging
+# _logger = logging.getLogger(__name__)
+
+# def _try_import(mod_name: str) -> bool:
+#     try:
+#         __import__(mod_name)
+#         return True
+#     except Exception as e:
+#         _logger.debug("Import %s failed: %s", mod_name, e)
+#         return False
+
+# for base in ("", "src."):
+#     ok1 = _try_import(f"{base}services.dispatcher")
+#     ok2 = _try_import(f"{base}database.db_client")
+#     ok3 = _try_import(f"{base}database.redis_client")
+#     if ok1 or ok2 or ok3:
+#         _logger.info("Imported task modules using prefix '%s'", base)
+#         break
+# else:
+#     _logger.warning("Failed to import any known task modules; tasks may not be registered")

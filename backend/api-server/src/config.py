@@ -24,7 +24,7 @@ else:
 
 if not POSTGRES_USER or not POSTGRES_DB or not POSTGRES_PASSWORD:
     logger.warning(
-        f"Postgres connection settings are incomplete: \
+        f"Postgres connection settings are incomplete (API server): \
         user={bool(POSTGRES_USER)} \
         db={bool(POSTGRES_DB)} \
         password_loaded={bool(POSTGRES_PASSWORD)} \

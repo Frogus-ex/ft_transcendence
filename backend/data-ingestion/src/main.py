@@ -15,10 +15,15 @@ logging.basicConfig(
 BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
 
 async def run_ingestion():
-	"""Main function to run the data ingestion process"""
+	"""Main function to run the data ingestion process.
 
-	logging.info("Creating a connection pool to the databse...")
-	await init_db_pool()
+	Note: DB init/cleanup and processing are handled as Celery tasks; this
+	function only feeds messages into Celery workers.
+	"""
+
+	logging.info("Requesting DB pool initialization (Celery task)...")
+	# Initialize DB pool asynchronously via Celery worker
+	init_db_pool.delay()
 
 	logging.info("Connecting to Binance websockets...")
 
@@ -38,8 +43,9 @@ async def run_ingestion():
 
 							cleaned_data = parse_raw_data(raw_data)
 
-							if (cleaned_data):
-								await process_and_dispatch(cleaned_data)
+							if cleaned_data:
+								# Push processing to Celery worker
+								process_and_dispatch.delay(cleaned_data)
 
 			except ConnectionClosed:
 				logging.warning("Connection closed. Reconnecting in 2s...")
@@ -49,8 +55,8 @@ async def run_ingestion():
 				logging.error(f"Error: {e}. Reconnecting in 5s...")
 				await asyncio.sleep(5)
 	finally:
-		logging.info("Closing the connection pool to the databse...")
-		await close_db_pool()
+		logging.info("Requesting DB pool close (Celery task)...")
+		close_db_pool.delay()
 
 if __name__ == "__main__":
 	asyncio.run(run_ingestion())
