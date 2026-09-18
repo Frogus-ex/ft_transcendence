@@ -1,6 +1,4 @@
 import logging
-from datetime import datetime
-from zoneinfo import ZoneInfo
 from config import (
     POSTGRES_USER,
     POSTGRES_PASSWORD,
@@ -9,50 +7,47 @@ from config import (
     POSTGRES_HOST,
 )
 from .models import Ticker
-from .orm_db import AsyncSessionLocal
-import asyncpg
+from .orm_db import SessionLocal
+from tasks import app
+from psycopg_pool import ConnectionPool
 
 logger = logging.getLogger(__name__)
 
 # Creating pool global variable to store the connection pool
-pool : asyncpg.Pool | None = None
+pool: ConnectionPool | None = None
 
-async def   init_db_pool():
-    """Initializing connection pool to Postgres"""
+@app.task(name="init_db_pool")
+def init_db_pool():
+    """Initializing a psycopg connection pool to Postgres (optional).
 
-    global  pool
+    SQLAlchemy sessions use the engine's pool; this pool is available
+    for raw SQL or other direct psycopg usages.
+    """
+    global pool
     try:
-        pool = await asyncpg.create_pool(
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD,
-            database=POSTGRES_DB,
-            port=POSTGRES_PORT,
-            host=POSTGRES_HOST,
-            min_size=1,
-            max_size=10
-        )
-        logger.info("Postgres connection pool successfully initialized!")
+        dsn = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+        pool = ConnectionPool(conninfo=dsn, min_size=1, max_size=10)
+        logger.info("Postgres psycopg pool successfully initialized!")
     except Exception as e:
-        logger.error(f"Failed to connect to PostgreSQL: {e}")
+        logger.error(f"Failed to initialize psycopg pool: {e}")
 
-async def   close_db_pool():
-    """Cleanly closing the connection pool to Postgres"""
-
-    global  pool
+@app.task(name="close_db_pool")
+def close_db_pool():
+    """Cleanly closing the psycopg connection pool to Postgres"""
+    global pool
     if pool:
-        await pool.close()
-        logger.info("Postgres pool closed.")
-
-async def   save_to_db(cleaned_data: dict) -> None:
-    """Saving the cleaned data to the database with SQLAlchemy"""
-
-    global  pool
-    if not pool:
-        logger.warning("Postgres pool is not initialized, saving cancelled.")
-        return
-
-    async with AsyncSessionLocal() as session:
         try:
+            pool.close()
+            logger.info("Postgres pool closed.")
+        except Exception as e:
+            logger.error(f"Error closing pool: {e}")
+
+@app.task(name="save_to_db")
+def save_to_db(cleaned_data: dict) -> None:
+    """Saving the cleaned data to the database with SQLAlchemy (synchronous)."""
+
+    try:
+        with SessionLocal() as session:
             tick = Ticker(
                 symbol=cleaned_data["symbol"],
                 price=cleaned_data["price"],
@@ -60,8 +55,11 @@ async def   save_to_db(cleaned_data: dict) -> None:
                 timestamp=cleaned_data["timestamp"],
             )
             session.add(tick)
-            await session.commit()
+            session.commit()
             logger.info(f"Saved to Postgres: {cleaned_data['symbol']} -> ${cleaned_data['price']}")
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"Error while saving with SQLAlchemy: {e}")
+    except Exception as e:
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        logger.error(f"Error while saving with SQLAlchemy: {e}")

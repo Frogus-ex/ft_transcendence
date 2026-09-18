@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
+from urllib.parse import quote_plus
 from utils import manager
 from routers import markets, websockets
 
@@ -25,7 +26,8 @@ async def   lifespan(app: FastAPI):
     logging.info("Creating Redis connection pool and client...")
     try:
         if REDIS_PASSWORD:
-            redis_url = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
+            enc = quote_plus(REDIS_PASSWORD)
+            redis_url = f"redis://:{enc}@{REDIS_HOST}:{REDIS_PORT}/0"
         else:
             redis_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
         app.state.redis_pool = aredis.ConnectionPool.from_url(
@@ -45,7 +47,7 @@ async def   lifespan(app: FastAPI):
     # Redis listening to ticks (Background Task)
     async def redis_listener():
         pubsub = redis_client.pubsub()
-        await pubsub.subscribe("market_ticks", "market_candles")
+        await pubsub.subscribe("market_ticks_channel")
         logging.info("Subscribed to Redis channels!")
 
         try:

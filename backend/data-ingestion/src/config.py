@@ -24,16 +24,16 @@ else:
 
 if not POSTGRES_USER or not POSTGRES_DB or not POSTGRES_PASSWORD:
     logger.warning(
-        f"Postgres connection settings are incomplete: \
+        f"Postgres connection settings are incomplete (Data Ingestion): \
         user={bool(POSTGRES_USER)} \
         db={bool(POSTGRES_DB)} \
         password_loaded={bool(POSTGRES_PASSWORD)} \
         password_file={password_file_path_postgres}"
     )
 
-# Database URL for SQLAlchemy
+# Database URL for SQLAlchemy (synchronous driver using psycopg)
 DB_URL = (
-    f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
 
 # Redis environment
