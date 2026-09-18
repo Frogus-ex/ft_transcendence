@@ -179,7 +179,11 @@ ws.onclose = () => console.log("Closing...");
 ws.onerror = (error) => console.log("ERROR:", error);
 ```
 
-If the ingestion service is publishing to Redis and the API server is subscribed correctly, the browser should receive live updates.
+If the ingestion service is publishing to Redis and the API server is subscribed correctly, the browser should receive live updates.  
+
+Here's what it should looks like:
+
+![alt text](images/image-websocket.png)
 
 ### Watchlist validation
 
@@ -189,7 +193,11 @@ Open the API documentation:
 http://localhost:8000/docs
 ```
 
-Then call `GET /api/markets` to verify the current price and the 24-hour change are returned in JSON.
+Then call `GET /api/markets` to verify the current price and the 24-hour change are returned in JSON.  
+
+Here's what it should look like:
+
+![alt text](images/image-watchlist.png)
 
 ### Candle validation
 
