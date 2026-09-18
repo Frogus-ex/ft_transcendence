@@ -37,11 +37,12 @@ up:
 	$(COMPOSE) ps
 
 down:
-	$(COMPOSE) down
+	$(COMPOSE) down --remove-orphans
 	@echo "$(COLOUR_YELLOW)containers stopped, volumes kept$(COLOUR_END)"
 
-fclean: down
-	$(COMPOSE) down -v
+fclean:
+	$(COMPOSE) down -v --remove-orphans
+	@podman rm -fa 2>/dev/null || true
 	@/usr/bin/rm -rf secrets/*.txt secrets/*.json
 	@echo "$(COLOUR_RED)all clean: volumes and secrets removed$(COLOUR_END)"
 

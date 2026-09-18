@@ -12,7 +12,7 @@ async def   ws_market_data(websocket: WebSocket):
     """Opening a websocket pipeline and pushing ticks from Redis (every s/ms)"""
 
     logger.info("Opening websocket pipeline...")
-    await websocket.accept(websocket)
+    await manager.connect(websocket)
     logging.info("Websocket pipeline is now opened!")
 
     try:
