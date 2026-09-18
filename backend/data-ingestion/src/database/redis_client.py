@@ -29,7 +29,7 @@ def date_time_encoder(obj):
         return obj.isoformat()
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
-@app.task(name="database.redis_client.save_to_cache_and_publish")
+@app.task(name="save_to_cache_and_publish")
 def save_to_cache_and_publish(data: dict) -> None :
     """Saving the cleaned data into Redis cache and publish it to FastAPI"""
     

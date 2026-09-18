@@ -40,9 +40,7 @@ async def run_ingestion():
 
 						while True:
 							raw_data = await websocket.recv()
-
 							cleaned_data = parse_raw_data(raw_data)
-
 							if cleaned_data:
 								# Push processing to Celery worker
 								process_and_dispatch.delay(cleaned_data)

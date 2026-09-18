@@ -12,7 +12,7 @@ SAVE_INTERVAL_SECOND = 1.0
 LAST_SAVED_PRICE = None
 
 
-@app.task(name="services.dispatcher.process_and_dispatch")
+@app.task(name="process_and_dispatch")
 def process_and_dispatch(cleaned_data: dict):
     """Process the cleaned data and dispatch it to Redis and Postgres.
 

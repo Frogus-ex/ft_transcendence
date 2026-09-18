@@ -1,3 +1,5 @@
+# To Update
+
 # Data Ingestion Backend
 
 The ingestion backend follows an EtLT pipeline (Extract, Transform-Light, Load, Transform-Heavy). It connects to the Binance WebSocket, extracts live market events, performs a lightweight validation and normalization step, stores the cleaned data in Redis and PostgreSQL, and then performs heavier transformations later to generate derived market data for the frontend.

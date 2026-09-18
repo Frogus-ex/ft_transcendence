@@ -94,7 +94,7 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_celery
     restart: unless-stopped
-    command: celery -A src.tasks worker --loglevel=INFO
+    command: celery -A src.tasks worker --loglevel=WARNING
     env_file:
       - .env
     environment:

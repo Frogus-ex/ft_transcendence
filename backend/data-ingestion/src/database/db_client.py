@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 # Creating pool global variable to store the connection pool
 pool: ConnectionPool | None = None
-@app.task(name="database.db_client.init_db_pool")
+
+@app.task(name="init_db_pool")
 def init_db_pool():
     """Initializing a psycopg connection pool to Postgres (optional).
 
@@ -29,7 +30,8 @@ def init_db_pool():
         logger.info("Postgres psycopg pool successfully initialized!")
     except Exception as e:
         logger.error(f"Failed to initialize psycopg pool: {e}")
-@app.task(name="database.db_client.close_db_pool")
+
+@app.task(name="close_db_pool")
 def close_db_pool():
     """Cleanly closing the psycopg connection pool to Postgres"""
     global pool
@@ -39,7 +41,8 @@ def close_db_pool():
             logger.info("Postgres pool closed.")
         except Exception as e:
             logger.error(f"Error closing pool: {e}")
-@app.task(name="database.db_client.save_to_db")
+
+@app.task(name="save_to_db")
 def save_to_db(cleaned_data: dict) -> None:
     """Saving the cleaned data to the database with SQLAlchemy (synchronous)."""
 
