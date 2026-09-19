@@ -172,16 +172,16 @@ services:
     networks:
       - transcendence_net
 
-  # # cadvisor:
-  # #   image: gcr.io/cadvisor/cadvisor:latest
-  # #   container_name: transcendence_cadvisor
-  # #   restart: unless-stopped
-  # #   volumes:
-  # #     - /var/run:/var/run:ro
-  # #     - /sys:/sys:ro
-  # #     - /var/lib/containers:/var/lib/containers:ro
-  # #   networks:
-  # #     - transcendence_net
+  # # # cadvisor:
+  # # #   image: gcr.io/cadvisor/cadvisor:latest
+  # # #   container_name: transcendence_cadvisor
+  # # #   restart: unless-stopped
+  # # #   volumes:
+  # # #     - /var/run:/var/run:ro
+  # # #     - /sys:/sys:ro
+  # # #     - /var/lib/containers:/var/lib/containers:ro
+  # # #   networks:
+  # # #     - transcendence_net
 
   postgres-exporter:
     image: docker.io/prometheuscommunity/postgres-exporter:latest

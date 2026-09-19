@@ -46,24 +46,25 @@ async def   lifespan(app: FastAPI):
 
     # Redis listening to ticks (Background Task)
     async def redis_listener():
+        channel = "market_ticks_channel"
         pubsub = redis_client.pubsub()
-        await pubsub.subscribe("market_ticks_channel")
+        await pubsub.subscribe(channel)
         logging.info("Subscribed to Redis channels!")
 
         try:
             # Waiting for the messages sent by the ingestion or Celery
             async for message in pubsub.listen():
-                if message["type"] == "message":
+                if message and message["type"] == "message":
                     try:
-                        data = message["data"].decode("utf-8")
-                        logging.info(f"Redis Test: {data}")
+                        data = message["data"]
+
                         # Redis send the message to all clients of manager
                         await manager.broadcast(message=data)
                     except Exception as e:
                         logging.error(f"Failed to process message: {e}")
         except asyncio.CancelledError:
             logging.warning("Redis listener task cancelled, unsubsribing...")
-            await pubsub.unsubscribe()
+            await pubsub.unsubscribe(channel)
             await pubsub.close()
             raise
         except Exception as e:
