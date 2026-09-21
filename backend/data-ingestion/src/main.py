@@ -1,9 +1,6 @@
-from services import parse_raw_data
-from services import process_and_dispatch
+from services import listen_stream
 from database import init_db_pool, close_db_pool
-from websockets.exceptions import ConnectionClosed
 import asyncio
-import websockets
 import logging
 
 logging.basicConfig(
@@ -12,7 +9,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+# Creating a list of dict of Binance WebSocket URLs
+streams = [
+	{"url": "wss://stream.binance.com:9443/ws/btcusdt@trade", "symbol": "BTCUSDT"},
+	{"url": "wss://stream.binance.com:9443/ws/ethusdt@trade", "symbol": "ETHUSDT"},
+	{"url": "wss://stream.binance.com:9443/ws/solusdt@trade", "symbol": "SOLUSDT"},
+	{"url": "wss://stream.binance.com:9443/ws/xrpusdt@trade", "symbol": "XRPUSDT"},
+	{"url": "wss://stream.binance.com:9443/ws/adausdt@trade", "symbol": "ADAUSDT"},
+]
 
 async def run_ingestion():
 	"""Main function to run the data ingestion process.
@@ -25,33 +29,15 @@ async def run_ingestion():
 	# Initialize DB pool asynchronously via Celery worker
 	init_db_pool.delay()
 
-	logging.info("Connecting to Binance websockets...")
+	logging.info("Connecting to Binance WebSockets...")
 
 	try:
-		while True:
-			try:
-				# Connecting to Binance websockets, adding ping so Binance server doesn't close automatically
-				async with websockets.connect(
-					BINANCE_WS_URL,
-					ping_interval = 20, # Send ping every 20s
-					ping_timeout = 10 # Timeout after 10s
-					) as websocket:
-						logging.info("Connected to Binance websocket!")
-
-						while True:
-							raw_data = await websocket.recv()
-							cleaned_data = parse_raw_data(raw_data)
-							if cleaned_data:
-								# Push processing to Celery worker
-								process_and_dispatch.delay(cleaned_data)
-
-			except ConnectionClosed:
-				logging.warning("Connection closed. Reconnecting in 2s...")
-				await asyncio.sleep(2)
-
-			except Exception as e:
-				logging.error(f"Error: {e}. Reconnecting in 5s...")
-				await asyncio.sleep(5)
+		# Looping through Binance WebSocket URLs
+		async with asyncio.TaskGroup() as tg:
+			for stream in streams:
+				tg.create_task(listen_stream(stream["url"], stream["symbol"]))
+	except* ExceptionGroup as e:
+		logging.error(f"Fatal error in TaskGroup: {e}")
 	finally:
 		logging.info("Requesting DB pool close (Celery task)...")
 		close_db_pool.delay()

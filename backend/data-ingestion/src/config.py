@@ -2,6 +2,7 @@
 
 import os
 import logging
+from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,6 @@ if not POSTGRES_USER or not POSTGRES_DB or not POSTGRES_PASSWORD:
         password_loaded={bool(POSTGRES_PASSWORD)} \
         password_file={password_file_path_postgres}"
     )
-
-from urllib.parse import quote_plus
 
 # Database URL for SQLAlchemy (synchronous driver using psycopg)
 # URL-encode the password to avoid parsing issues when it contains special chars
