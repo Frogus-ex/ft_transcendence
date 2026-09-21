@@ -17,7 +17,7 @@ fi
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_ADMIN_USER" --dbname "$POSTGRES_DB" <<-EOSQL
 
-    -- Initializing the database
+    -- Initializing the table to store cleaned data
     CREATE TABLE IF NOT EXISTS market_ticks (
         id SERIAL PRIMARY KEY,
         symbol VARCHAR(20) NOT NULL,
@@ -30,6 +30,23 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_ADMIN_USER" --dbname "$POSTGRES_DB
     -- Creating index for faster queries on symbol and timestamp
     CREATE INDEX IF NOT EXISTS idx_ticks_symbol_timestamp
     ON market_ticks(symbol, timestamp DESC);
+
+    -- Initializing the table to store calculated data (candles)
+    CREATE TABLE IF NOT EXISTS market_candles (
+        id SERIAL PRIMARY KEY,
+        symbol VARCHAR(20) NOT NULL,
+        interval VARCHAR(5) NOT NULL,
+        time TIMESTAMP NOT NULL,
+        open DECIMAL(18, 8) NOT NULL,
+        high DECIMAL(18, 8) NOT NULL,
+        low DECIMAL(18, 8) NOT NULL,
+        close DECIMAL(18, 8) NOT NULL,
+        volume DECIMAL(18, 8) NOT NULL
+    );
+
+    -- Creating index for faster queries on symbol and time
+    CREATE INDEX IF NOT EXISTS idx_candles_symbol_time
+    ON market_candles(symbol, time DESC);
 
     -----------------------------------------------------------------------------------------------
     -- Creating a user for ingestion with limited privileges (INSERT/SELECT only)
