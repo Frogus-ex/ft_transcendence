@@ -160,8 +160,12 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
-    # depends_on:
-    #   - frontend
+    nginx:
+     depends_on:
+       - frontend
+       - api-server
+       - grafana
+       - prometheus
     networks:
       - transcendence_net
 
