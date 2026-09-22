@@ -32,3 +32,7 @@ app.conf.update(
     worker_prefetch_multiplier=1,
     task_acks_late=True,
 )
+
+# For shutting down the data pipeline
+app.conf.broker_connection_retry_on_startup = False
+app.conf.task_publish_retry = False
