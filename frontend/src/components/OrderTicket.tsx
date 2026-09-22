@@ -3,36 +3,28 @@ import Button from "./Button";
 import Input from "./Input";
 import Label from "./Label";
 
-// Reprend la forme du contrat d'API - permettra de brancher le backend.
-//NE PAS CHANGER LES NOMS
 type OrderSide = "buy" | "sell";
 type OrderType = "market" | "limit";
 
 type OrderFormState = {
-  side: OrderSide; //"buy" | "sell"
-  orderType: OrderType; // "market" | "limit"
+  side: OrderSide;
+  orderType: OrderType;
   quantity: string;
   limitPrice: string;
   stopLoss: string;
   takeProfit: string;
 };
 
+// Mock : le vrai prix viendra de MarketContext (Phase 3). Une seule constante
+// réutilisée en Zone 1 (affichage) et Zone 7 (calcul), pour ne pas avoir deux
+// valeurs qui pourraient un jour se désynchroniser.
+const currentPrice = 64250.32;
+
 /**
- * Formulaire de passage d'ordre (Buy/Sell, Market/Limits, SL/TP)
- * 
- * Pour le moment Phase2: Mock, ne fait que simuler l'envoi pour le moment
- * 
- * A BRANCHER sur AuthContext (pour le token) et le PortfolioContext
- * (pour ecrire un nouvel ordre) une fois aue ke Back Web exposera POST api/orders.
- * 
+ * OrderTicket — formulaire de passage d'ordre (Buy/Sell, Market/Limit, SL/TP).
+ * Phase 2 : tout est en mock, form géré en local (Option A : un seul useState).
  */
 function OrderTicket() {
-
-  /**
-   * UseState renvoie un epaire [valeur, fonction-pour-la-changer]
-   * - form = objet actuel du formulaire (side, orderType, qunatity ...)
-   * - setForm = la fonction fournie par React pour remplacer cet objet
-   */
   const [form, setForm] = useState<OrderFormState>({
     side: "buy",
     orderType: "market",
@@ -42,69 +34,82 @@ function OrderTicket() {
     takeProfit: "",
   });
 
-  /**
-   * Appele quand l'utilisateur clique sur Buy ou Sell, change uniquement form.side
-   * @param side 
-   */
   function handleSideChange(side: OrderSide) {
     setForm({ ...form, side });
   }
 
-  /**
-   * Appel quand l'tiisateur clique sur Market ou Limit, change uniquement form.orderType
-   * @param orderType
-   */
   function handleTypeChange(orderType: OrderType) {
     setForm({ ...form, orderType });
   }
 
-  // TODO : renvoie true seulement si le formulaire est valide (voir étape 5 du guide) :
-  // - quantity > 0
-  // - si orderType === "limit", limitPrice doit être rempli
   function isFormValid(): boolean {
-    return false; // à remplacer
+    const quantityNumber = parseFloat(form.quantity);
+    if (!quantityNumber || quantityNumber <= 0) return false;
+    if (form.orderType === "limit" && !form.limitPrice) return false;
+    return true;
   }
 
-  // TODO : construit l'objet au format du contrat d'API, génère un id/timestamp factices,
-  // et (pour l'instant) logue-le dans la console — la vraie écriture dans PortfolioContext
-  // viendra quand ce Context existera.
   function handleSubmit() {
-    // ...
+    if (!isFormValid()) return;
+
+    const order = {
+      id: `mock_${Date.now()}`,
+      symbol: "BTCUSDT",
+      side: form.side,
+      type: form.orderType,
+      quantity: parseFloat(form.quantity),
+      limitPrice: form.orderType === "limit" ? parseFloat(form.limitPrice) : undefined,
+      stopLoss: form.stopLoss ? parseFloat(form.stopLoss) : undefined,
+      takeProfit: form.takeProfit ? parseFloat(form.takeProfit) : undefined,
+      status: "filled",
+      timestamp: new Date().toISOString(),
+    };
+
+    console.log("Mock order submitted:", order);
   }
+
+  const quantityNumber = parseFloat(form.quantity) || 0;
+  const priceForCost =
+    form.orderType === "limit" && form.limitPrice
+      ? parseFloat(form.limitPrice)
+      : currentPrice;
+  const estimatedCost = quantityNumber * priceForCost;
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-5 flex flex-col gap-5">
-      {/* ZONE 1 — En-tête : figé en dur pour l'instant, viendra de MarketContext */}
+      {/* Zone 1 — En-tête */}
       <div className="flex items-baseline justify-between">
         <span className="text-gray-100 font-semibold">BTC / USDT</span>
-        <span className="text-green-400 font-semibold">$64,250.32</span>
+        <span className="text-green-400 font-semibold">
+          ${currentPrice.toLocaleString()}
+        </span>
       </div>
 
-      {/* ZONE 2 — Toggle Buy / Sell */}
-    <div className="grid grid-cols-2 gap-2">
-      <Button
-        variant="primary"
-        size="medium"
-        type="button"
-        icon={false}
-        shape="square"
-        onClick={() => handleSideChange("buy")}
-      >
-        Buy
-      </Button>
-      <Button
-        variant={form.side === "sell" ? "danger" : "secondary"}
-        size="medium"
-        type="button"
-        icon={false}
-        shape="square"
-        onClick={() => handleSideChange("sell")}
-      >
-        Sell
-      </Button>
-    </div>
+      {/* Zone 2 — Buy / Sell */}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="primary"
+          size="medium"
+          type="button"
+          icon={false}
+          shape="square"
+          onClick={() => handleSideChange("buy")}
+        >
+          Buy
+        </Button>
+        <Button
+          variant={form.side === "sell" ? "danger" : "secondary"}
+          size="medium"
+          type="button"
+          icon={false}
+          shape="square"
+          onClick={() => handleSideChange("sell")}
+        >
+          Sell
+        </Button>
+      </div>
 
-      {/* ZONE 3 — Toggle Market / Limit */}
+      {/* Zone 3 — Market / Limit */}
       <div className="flex border border-gray-700 rounded-md w-fit">
         <button
           type="button"
@@ -140,14 +145,55 @@ function OrderTicket() {
         />
       </div>
 
-      {/* Zone 5 — Prix limite : TODO, n'afficher que si form.orderType === "limit" */}
-      {/* {form.orderType === "limit" && ( ... )} */}
+      {/* Zone 5 — Prix limite : uniquement si Limit est sélectionné */}
+      {form.orderType === "limit" && (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="limitPrice">Prix limite</Label>
+          <Input
+            id="limitPrice"
+            type="number"
+            size="medium"
+            value={form.limitPrice}
+            onChange={(e) => setForm({ ...form, limitPrice: e.target.value })}
+          />
+        </div>
+      )}
 
       {/* Zone 6 — Stop Loss / Take Profit */}
-      {/* TODO : deux Input type="number", sur le même modèle que Quantité */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="stopLoss">Stop Loss</Label>
+          <Input
+            id="stopLoss"
+            type="number"
+            size="medium"
+            value={form.stopLoss}
+            onChange={(e) => setForm({ ...form, stopLoss: e.target.value })}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="takeProfit">Take Profit</Label>
+          <Input
+            id="takeProfit"
+            type="number"
+            size="medium"
+            value={form.takeProfit}
+            onChange={(e) => setForm({ ...form, takeProfit: e.target.value })}
+          />
+        </div>
+      </div>
 
       {/* Zone 7 — Résumé */}
-      {/* TODO : calcule un coût estimé (quantity * prix courant ou limitPrice) */}
+      <div className="flex flex-col gap-1 text-sm">
+        <div className="flex justify-between text-gray-400">
+          <span>Coût estimé</span>
+          <span className="text-gray-100">${estimatedCost.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-gray-400">
+          <span>Solde disponible</span>
+          <span className="text-gray-100">$12,500.00</span>
+        </div>
+      </div>
 
       {/* Zone 8 — Soumission */}
       <Button
@@ -160,7 +206,6 @@ function OrderTicket() {
       >
         {form.side === "buy" ? "Buy BTC" : "Sell BTC"}
       </Button>
-
     </div>
   );
 }
