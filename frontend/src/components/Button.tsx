@@ -7,8 +7,8 @@ type ButtonProps = {
   size: "small" | "medium" | "large";
   type: "button" | "submit";
   onClick?: () => void;
-  icon?: boolean; // nouvelle prop optionnelle
-  shape?: "pill" | "square"; // nouvelle prop optionnelle
+  icon?: boolean;
+  shape?: "pill" | "square";
 };
 
 function Button({
