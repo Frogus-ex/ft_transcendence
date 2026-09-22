@@ -13,7 +13,7 @@ export const buttonHoverColors = {
 export const buttonBorderColors = {
   primary: "border border-green-600",
   secondary: "border border-indigo-700",
-  danger: "border borer-red-600",
+  danger: "border border-red-600",
 };
 
 export const badgeColors = {
