@@ -42,7 +42,7 @@ down:
 
 fclean:
 	$(COMPOSE) down -v --remove-orphans
-	@podman rm -fa 2>/dev/null || true
+	@podman rm -rf 2>/dev/null || true
 	@/usr/bin/rm -rf secrets/*.txt secrets/*.json
 	@echo "$(COLOUR_RED)all clean: volumes and secrets removed$(COLOUR_END)"
 
