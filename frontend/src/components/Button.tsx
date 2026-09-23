@@ -7,9 +7,10 @@ type ButtonProps = {
   size: "small" | "medium" | "large";
   type: "button" | "submit";
   onClick?: () => void;
+  disabled?: boolean;
 };
 
-function Button({ children, variant, size, onClick, type }: ButtonProps) {
+function Button({ children, variant, size, onClick, type, disabled }: ButtonProps) {
   return (
     <button
       className={
@@ -23,6 +24,7 @@ function Button({ children, variant, size, onClick, type }: ButtonProps) {
       }
       onClick={onClick}
       type={type}
+	  disabled={disabled}
     >
       {children}
       <CircleArrowRight
