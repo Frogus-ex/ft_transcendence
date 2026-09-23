@@ -1,5 +1,5 @@
-from parser import parse_raw_data
-from dispatcher import process_and_dispatch
+from .parser import parse_raw_data
+from .dispatcher import process_and_dispatch
 from websockets.exceptions import ConnectionClosed
 import asyncio
 import websockets
@@ -12,8 +12,8 @@ async def   listen_stream(url: str, symbol: str) -> str:
         try:
             async with websockets.connect(
                 url,
-                ping_interval = 20, # Send ping every 20s
-                ping_timeout = 10 # Timeout after 10s
+                ping_interval = 20,
+                ping_timeout = 10
                 ) as websocket:
                     logger.info(f"Connected to Binance {symbol} WebSocket!")
 
@@ -24,6 +24,10 @@ async def   listen_stream(url: str, symbol: str) -> str:
                         if cleaned_data:
                             # Push processing to Celery worker
                             process_and_dispatch.delay(cleaned_data)
+        except asyncio.CancelledError:
+             logging.info(f"Closing {symbol} WebSocket...")
+             raise
+
         except ConnectionClosed:
             logging.warning(f"Connection closed with {symbol}. Reconnecting in 2s...")
             await asyncio.sleep(2)

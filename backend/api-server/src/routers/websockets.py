@@ -8,11 +8,11 @@ router = APIRouter(prefix="/ws", tags=["WebSockets"])
 
 # WebSocket (Cache)
 @router.websocket("/markets/{symbol}")
-async def   ws_market_data(websocket: WebSocket):
+async def   ws_market_data(websocket: WebSocket, symbol: str):
     """Opening a websocket pipeline and pushing ticks from Redis (every s/ms)"""
 
     logger.info("Opening websocket pipeline...")
-    await manager.connect(websocket)
+    await manager.connect(websocket, symbol)
     logging.info("Websocket pipeline is now opened!")
 
     try:

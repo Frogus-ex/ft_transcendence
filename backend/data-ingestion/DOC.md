@@ -53,10 +53,13 @@ src/
 ├── main.py
 ├── config.py
 ├── tasks.py
+├── calculations/
+│   └── operations.py
 ├── scripts/
 │   └── init.sh
 ├── services/
 │   ├── __init__.py
+│   ├── listener.py
 │   ├── parser.py
 │   └── dispatcher.py
 └── database/
@@ -69,36 +72,58 @@ src/
 
 The files are grouped by responsibility:
 
-- `main.py`: runs the ingestion loop and manages the WebSocket connection.
+- `main.py`: creates the list of Binance streams and starts one task per symbol using an `asyncio.TaskGroup`.
 - `config.py`: loads application settings and secrets.
-- `tasks.py`: Celery worker for calculating heavy data in background.
+- `tasks.py`: Celery bootstrap and task registration entry point; it does not perform the heavy price calculations itself.
+- `calculations/operations.py`: dedicated module for heavy background aggregation calculations.
 - `scripts/init.sh`: initializes the PostgreSQL schema and application users.
-- `services/`: parses incoming data and dispatches it to external services.
+- `services/`: contains the stream listener, data parsing, and dispatch logic.
 - `database/`: provides Redis access, PostgreSQL access, and SQLAlchemy definitions.
 - `__init__.py`: marks directories as Python packages and can expose selected public functions.
 
 ## Data Flow
 
-1. `main.py` connects to the Binance BTCUSDT WebSocket stream and listens for live trade events.
-2. `parser.py` performs a light transformation by validating and normalizing the raw JSON payload into a minimal, useful structure.
-3. `dispatcher.py` writes the latest value to Redis and periodically writes filtered price updates to PostgreSQL.
-4. `redis_client.py` stores the current ticker as JSON in Redis for low-latency access.
-5. `db_client.py` persists the cleaned tick-level records through the SQLAlchemy ORM.
-- `tasks.py` performs the heavy transformation step by aggregating tick data into higher-level market summaries for the frontend.
+1. `main.py` defines the list of five Binance streams (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `XRPUSDT`, `ADAUSDT`) and creates one task per stream inside an `asyncio.TaskGroup`.
+2. `listener.py` connects to each stream and keeps the WebSocket alive, reconnecting automatically if the connection drops.
+3. `parser.py` performs a light transformation by validating and normalizing the raw JSON payload into a minimal, useful structure.
+4. `dispatcher.py` writes the latest value to Redis and periodically writes filtered price updates to PostgreSQL.
+5. `redis_client.py` stores the current ticker as JSON in Redis for low-latency access.
+6. `db_client.py` persists the cleaned tick-level records through the SQLAlchemy ORM.
+7. `tasks.py` only initializes the Celery app and registers the workload entry points; the actual heavy transformation logic is intentionally delegated to `calculations/operations.py`.
 
 ## Application Files
 
 ### `main.py`
 
-This is the application entry point. The Binance endpoint is defined as:
+This is the application entry point. Instead of managing one websocket only, it defines a list of all active Binance streams and starts a dedicated task for each one:
 
 ```python
-BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+streams = [
+    {"url": "wss://stream.binance.com:9443/ws/btcusdt@trade", "symbol": "BTCUSDT"},
+    {"url": "wss://stream.binance.com:9443/ws/ethusdt@trade", "symbol": "ETHUSDT"},
+    {"url": "wss://stream.binance.com:9443/ws/solusdt@trade", "symbol": "SOLUSDT"},
+    {"url": "wss://stream.binance.com:9443/ws/xrpusdt@trade", "symbol": "XRPUSDT"},
+    {"url": "wss://stream.binance.com:9443/ws/adausdt@trade", "symbol": "ADAUSDT"},
+]
 ```
 
-Before receiving data, the application initializes the PostgreSQL connection pool. It then opens an asynchronous WebSocket connection and continuously receives messages.
+The server initializes the ingestion flow and starts all listeners through `asyncio.TaskGroup()`, which makes the ingestion process concurrent and resilient. Each task calls `listen_stream(url, symbol)` so the app can handle multiple cryptocurrencies in parallel without blocking on a single connection.
 
-The connection uses periodic pings to remain active. If Binance closes the connection or another error occurs, the application logs the problem and retries after a short delay. The PostgreSQL pool is closed in the `finally` block when the application stops.
+The application still initializes the PostgreSQL connection pool and later closes it on shutdown. The main difference from the earlier single-stream design is that the network handling is delegated to dedicated listener tasks.
+
+### `services/listener.py`
+
+This module contains the active listener logic that was extracted from `main.py`. Each `listen_stream(url, symbol)` task opens a Binance WebSocket connection for one symbol, reads incoming trade messages, and sends the cleaned payload to the processing layer.
+
+The listener runs in a loop:
+
+- connect to the given Binance stream;
+- receive messages continuously;
+- validate and normalize each message with `parse_raw_data()`;
+- dispatch the processed payload with `process_and_dispatch.delay(cleaned_data)`;
+- if the connection closes or an error occurs, log the problem and reconnect after a short delay.
+
+This keeps ingestion resilient across one or many streams and allows the rest of the application to stay focused on parsing, validation, and data loading.
 
 ### `config.py`
 
@@ -132,7 +157,13 @@ This keeps the real-time cache current while reducing duplicate database records
 
 ### `tasks.py`
 
-`tasks.py` calculates aggregated market summaries across multiple time scales (for example: 1s, 1m, 5m, 1h). It reads recent tick records, computes grouped aggregates for the configured intervals, and writes the derived results back to the database using the helpers in `db_client.py`. Data scientists extending `tasks.py` should review the persistence patterns in `save_to_db()` and follow existing transaction/session conventions.
+`tasks.py` is the Celery entry point and configuration layer. Its responsibility is to initialize the Celery application, define the task registry, and expose the worker bootstrap needed to process background workloads. It does not perform the heavy market calculations itself; those calculations are expected to live in `calculations/operations.py`.
+
+The heavy transformation step is intentionally kept separate so that ingestion remains fast and the aggregation logic can evolve independently without blocking the live stream listener.
+
+### `calculations/operations.py`
+
+This module is reserved for the heavy background calculations used to derive market summaries such as OHLC candles and other time-based aggregations. For now, it is intentionally empty and acts as the dedicated place where the data scientist will later implement the aggregation logic across different time scales (for example: 1s, 1m, 5m, 1h).
 
 ### `database/redis_client.py`
 
@@ -152,7 +183,7 @@ This module manages the PostgreSQL connection pool and persists ticker data.
 
 `close_db_pool()` closes the psycopg pool cleanly when the application shuts down.
 
-The aggregation tasks in `tasks.py` call `save_to_db()` and other helpers from this module to persist derived market summaries; review `db_client.py` for transaction and session patterns to follow.
+The aggregation logic that will eventually be implemented in `calculations/operations.py` will use the same database persistence patterns as the rest of the ingestion pipeline. Review `db_client.py` for transaction and session conventions before adding heavy calculation jobs.
 
 ### `database/orm_db.py`
 

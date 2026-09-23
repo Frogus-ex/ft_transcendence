@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -56,10 +57,11 @@ async def   lifespan(app: FastAPI):
             async for message in pubsub.listen():
                 if message and message["type"] == "message":
                     try:
-                        data = message["data"]
+                        data = json.loads(message["data"])
+                        symbol = data.get("symbol")
 
                         # Redis send the message to all clients of manager
-                        await manager.broadcast(message=data)
+                        await manager.broadcast(symbol, data)
                     except Exception as e:
                         logging.error(f"Failed to process message: {e}")
         except asyncio.CancelledError:
