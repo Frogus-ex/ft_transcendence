@@ -3,13 +3,23 @@ import { CircleArrowRight } from "lucide-react";
 
 type ButtonProps = {
   children: React.ReactNode;
-  variant: "primary" | "secondary";
+  variant: "primary" | "secondary" | "danger";
   size: "small" | "medium" | "large";
   type: "button" | "submit";
   onClick?: () => void;
+  icon?: boolean;
+  shape?: "pill" | "square";
 };
 
-function Button({ children, variant, size, onClick, type }: ButtonProps) {
+function Button({
+  children,
+  variant,
+  size,
+  onClick,
+  type,
+  icon = true,
+  shape = "pill",
+}: ButtonProps) {
   return (
     <button
       className={
@@ -19,16 +29,19 @@ function Button({ children, variant, size, onClick, type }: ButtonProps) {
         " " +
         textColors.default +
         " " +
-        "group rounded-full inline-flex items-center gap-1.5"
+        "group inline-flex items-center gap-1.5 " +
+        (shape === "pill" ? "rounded-full" : "rounded-md")
       }
       onClick={onClick}
       type={type}
     >
       {children}
-      <CircleArrowRight
-        size={20}
-        className="transition-transform group-hover:translate-x-1"
-      />
+      {icon && (
+        <CircleArrowRight
+          size={20}
+          className="transition-transform group-hover:translate-x-1"
+        />
+      )}
     </button>
   );
 }
