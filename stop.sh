@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+<<<<<<< HEAD
+=======
+# By gwen
+# ----------------------
+>>>>>>> feature/api-server
 # I wrote this script to stop the data ingestion and celery container properly
 # before stopping other container otherwise podman will SIGKILL.
 # For "make down" and "make fclean"
@@ -34,7 +39,11 @@ case "$MODE" in
     fclean)
         echo -e "${RED}==> Running podman-compose down -v --remove-orphans${DEF}"
         podman-compose down -v --remove-orphans
+<<<<<<< HEAD
 	    podman rm -fa 2>/dev/null || true
+=======
+	    podman rm -f $(podman ps -aq --filter "name=^transcendence_") 2>/dev/null || true
+>>>>>>> feature/api-server
 	    /usr/bin/rm -rf secrets/*.txt secrets/*.json
         echo -e "${GRN}==> ✅ All cleaned: volumes and secrets removed${DEF}"
         ;;
