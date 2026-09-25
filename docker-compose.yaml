@@ -58,6 +58,7 @@ services:
     build:
       context: ./backend/data-ingestion
       dockerfile: Dockerfile
+    stop_grace_period: 30s
     container_name: transcendence_ingestion
     restart: unless-stopped
     env_file:

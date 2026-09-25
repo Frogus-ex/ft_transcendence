@@ -29,6 +29,7 @@ pw = open('secrets/redis_password.txt').read().strip(); \
 json.dump({'redis://redis:6379': pw}, open('secrets/redis_exporter_password.json', 'w'))"
 	@chmod 644 ./secrets/*.txt ./secrets/*.json
 	@chmod +x ./backend/data-ingestion/scripts/init.sh
+	@chmod +x ./stop.sh
 	@echo "$(COLOUR_GREEN)✅ secrets/ ready$(COLOUR_END)"
 
 up:
@@ -37,8 +38,8 @@ up:
 	$(COMPOSE) ps
 
 down:
-	$(COMPOSE) down --remove-orphans
-	@echo "$(COLOUR_YELLOW)containers stopped, volumes kept$(COLOUR_END)"
+	@chmod +x ./stop.sh
+	@./stop.sh down
 
 fclean:
 	$(COMPOSE) down -v --remove-orphans
