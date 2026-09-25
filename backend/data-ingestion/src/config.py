@@ -2,6 +2,7 @@
 
 import os
 import logging
+from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +25,18 @@ else:
 
 if not POSTGRES_USER or not POSTGRES_DB or not POSTGRES_PASSWORD:
     logger.warning(
-        f"Postgres connection settings are incomplete: \
+        f"Postgres connection settings are incomplete (Data Ingestion): \
         user={bool(POSTGRES_USER)} \
         db={bool(POSTGRES_DB)} \
         password_loaded={bool(POSTGRES_PASSWORD)} \
         password_file={password_file_path_postgres}"
     )
 
-# Database URL for SQLAlchemy
+# Database URL for SQLAlchemy (synchronous driver using psycopg)
+# URL-encode the password to avoid parsing issues when it contains special chars
+DB_PASSWORD_ESCAPED = quote_plus(POSTGRES_PASSWORD) if POSTGRES_PASSWORD else ""
 DB_URL = (
-    f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    f"postgresql+psycopg://{POSTGRES_USER}:{DB_PASSWORD_ESCAPED}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
 
 # Redis environment

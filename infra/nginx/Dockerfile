@@ -1,4 +1,4 @@
-FROM nginx:alpine
+FROM docker.io/library/nginx:alpine
 
 # openssl n'est pas installé par défaut sur l'image nginx:alpine minimale
 RUN apk upgrade --no-cache && \

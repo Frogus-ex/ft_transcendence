@@ -5,7 +5,7 @@ type InputProps = {
   value: string;
   id: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  type: "text" | "email" | "password";
+  type: "text" | "email" | "password" | "number";
   placeholder?: string;
   size: "small" | "medium" | "large";
   onFocus?: () => void;

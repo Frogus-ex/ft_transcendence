@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -7,7 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
-from connection_manager import manager
+from urllib.parse import quote_plus
+from utils import manager
 from routers import markets, websockets
 
 logging.basicConfig(
@@ -25,7 +27,8 @@ async def   lifespan(app: FastAPI):
     logging.info("Creating Redis connection pool and client...")
     try:
         if REDIS_PASSWORD:
-            redis_url = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
+            enc = quote_plus(REDIS_PASSWORD)
+            redis_url = f"redis://:{enc}@{REDIS_HOST}:{REDIS_PORT}/0"
         else:
             redis_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
         app.state.redis_pool = aredis.ConnectionPool.from_url(
@@ -44,23 +47,26 @@ async def   lifespan(app: FastAPI):
 
     # Redis listening to ticks (Background Task)
     async def redis_listener():
+        channel = "market_ticks_channel"
         pubsub = redis_client.pubsub()
-        await pubsub.subscribe("market_ticks", "market_candles")
+        await pubsub.subscribe(channel)
         logging.info("Subscribed to Redis channels!")
 
         try:
             # Waiting for the messages sent by the ingestion or Celery
             async for message in pubsub.listen():
-                if message["type"] == "message":
+                if message and message["type"] == "message":
                     try:
-                        data = message["data"].decode("utf-8")
+                        data = json.loads(message["data"])
+                        symbol = data.get("symbol")
+
                         # Redis send the message to all clients of manager
-                        await manager.broadcast(message=data)
+                        await manager.broadcast(symbol, data)
                     except Exception as e:
                         logging.error(f"Failed to process message: {e}")
         except asyncio.CancelledError:
             logging.warning("Redis listener task cancelled, unsubsribing...")
-            await pubsub.unsubscribe()
+            await pubsub.unsubscribe(channel)
             await pubsub.close()
             raise
         except Exception as e:
