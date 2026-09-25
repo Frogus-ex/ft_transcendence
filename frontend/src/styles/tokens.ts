@@ -1,16 +1,19 @@
 export const buttonColors = {
   primary: "bg-green-500",
   secondary: "bg-indigo-500",
+  danger: "bg-red-500",
 };
 
 export const buttonHoverColors = {
   primary: "hover:bg-green-600",
   secondary: "hover:bg-indigo-600",
+  danger: "hover:bg-red-600",
 };
 
 export const buttonBorderColors = {
   primary: "border border-green-600",
   secondary: "border border-indigo-700",
+  danger: "border border-red-600",
 };
 
 export const badgeColors = {

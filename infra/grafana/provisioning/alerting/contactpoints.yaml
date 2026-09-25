@@ -1,0 +1,10 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: webhook-demo
+    receivers:
+      - uid: webhook-demo-uid
+        type: webhook
+        settings:
+          url: http://webhook-receiver:8080
+          httpMethod: POST

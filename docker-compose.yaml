@@ -62,6 +62,7 @@ services:
     build:
       context: ./backend/data-ingestion
       dockerfile: Dockerfile
+    stop_grace_period: 30s
     container_name: transcendence_ingestion
     restart: unless-stopped
     env_file:
@@ -94,12 +95,12 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_celery
     restart: unless-stopped
-    command: celery -A src.tasks worker --loglevel=INFO
+    command: celery -A src.tasks worker --loglevel=WARNING
     env_file:
       - .env
     environment:
-      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER}
-      POSTGRES_READONLY_PASSWORD_FILE: /run/secrets/postgres_readonly_password
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PORT: ${POSTGRES_PORT}
@@ -160,8 +161,15 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
-    # depends_on:
-    #   - frontend
+    depends_on:
+      frontend :
+        condition: service_healthy
+      api-server:
+        condition: service_started
+      grafana:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
     networks:
       - transcendence_net
 
@@ -169,19 +177,17 @@ services:
     image: docker.io/prom/node-exporter:latest
     container_name: transcendence_node_exporter
     restart: unless-stopped
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host/root'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
     networks:
       - transcendence_net
-
-  # # cadvisor:
-  # #   image: gcr.io/cadvisor/cadvisor:latest
-  # #   container_name: transcendence_cadvisor
-  # #   restart: unless-stopped
-  # #   volumes:
-  # #     - /var/run:/var/run:ro
-  # #     - /sys:/sys:ro
-  # #     - /var/lib/containers:/var/lib/containers:ro
-  # #   networks:
-  # #     - transcendence_net
 
   postgres-exporter:
     image: docker.io/prometheuscommunity/postgres-exporter:latest
@@ -219,6 +225,7 @@ services:
     image: docker.io/prom/prometheus:latest
     container_name: transcendence_prometheus
     restart: unless-stopped
+    user: "0:0"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--web.external-url=/prometheus/'
@@ -226,6 +233,12 @@ services:
     volumes:
       - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/prometheus/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - transcendence_net
 
@@ -244,20 +257,42 @@ services:
       - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
-      - prometheus
+      prometheus :
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - transcendence_net
 
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: transcendence_frontend
-  #   restart: unless-stopped
-  #   ports:
-  #     - "${FRONTEND_PORT}:5173"
-  #   networks:
-  #     - transcendence_net
+  webhook-receiver:
+    image: docker.io/mendhak/http-https-echo:33
+    container_name: transcendence_webhook_receiver
+    restart: unless-stopped
+    environment:
+      HTTP_PORT: 8080
+    networks:
+      - transcendence_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: transcendence_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - transcendence_net
 
 secrets:
   postgres_admin_password:

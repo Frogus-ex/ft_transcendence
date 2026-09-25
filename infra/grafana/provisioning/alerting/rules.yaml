@@ -1,0 +1,123 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: infra-critical
+      folder: infra-alerts
+      interval: 1m
+      rules:
+        - uid: bfwtyhccxd5vkc
+          title: PostgreSQL Down
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                disableTextWrap: false
+                editorMode: builder
+                expr: pg_up
+                fullMetaSearch: false
+                includeNullMetadata: true
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+                useBackend: false
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    name: Expression
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 1m
+          annotations:
+            summary: PostgreSQL has been inactive for more than 1 minute
+          labels:
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: webhook-demo
+
+        - uid: bfwu8j555s4qoa
+          title: Redis Down
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: prometheus
+              model:
+                disableTextWrap: false
+                editorMode: builder
+                expr: redis_up
+                fullMetaSearch: false
+                includeNullMetadata: true
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+                useBackend: false
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1
+                        type: lt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 1m
+          annotations:
+            summary: Redis has been inactive for more than 1 minute
+          labels:
+            severity: critical
+          isPaused: false
+          notification_settings:
+            receiver: webhook-demo
