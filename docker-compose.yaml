@@ -21,8 +21,6 @@ services:
       - postgres_admin_password
       - postgres_ingest_password
       - postgres_readonly_password
-    ports:
-      - "${POSTGRES_PORT}:5432"
     volumes:
       - ./backend/data-ingestion/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
       - postgres_data:/var/lib/postgresql/data
@@ -45,8 +43,6 @@ services:
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
     secrets:
       - redis_password
-    ports:
-      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -126,8 +122,6 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_api_server
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     env_file:
       - .env
     environment:
@@ -233,12 +227,6 @@ services:
     volumes:
       - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/prometheus/-/healthy || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
     networks:
       - transcendence_net
 
@@ -283,8 +271,6 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_frontend
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT}:5173"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173 || exit 1"]
       interval: 10s

@@ -17,12 +17,12 @@ setup:
 		echo "$(COLOUR_GREEN)✅ .env created$(COLOUR_END)"; \
 	fi
 	@mkdir -p secrets
-	@[ -f secrets/postgres_admin_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/postgres_admin_password.txt
-	@[ -f secrets/postgres_ingest_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/postgres_ingest_password.txt
-	@[ -f secrets/postgres_readonly_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/postgres_readonly_password.txt
-	@[ -f secrets/redis_password.txt ]      || openssl rand -base64 24 | tr -d '\n' > secrets/redis_password.txt
+	@[ -f secrets/postgres_admin_password.txt ]      || openssl rand -hex 24 | tr -d '\n' > secrets/postgres_admin_password.txt
+	@[ -f secrets/postgres_ingest_password.txt ]      || openssl rand -hex 24 | tr -d '\n' > secrets/postgres_ingest_password.txt
+	@[ -f secrets/postgres_readonly_password.txt ]      || openssl rand -hex 24 | tr -d '\n' > secrets/postgres_readonly_password.txt
+	@[ -f secrets/redis_password.txt ]      || openssl rand -hex 24 | tr -d '\n' > secrets/redis_password.txt
 	@[ -f secrets/jwt_secret.txt ]           || openssl rand -hex 32 | tr -d '\n' > secrets/jwt_secret.txt
-	@[ -f secrets/grafana_admin_password.txt ] || openssl rand -base64 24 | tr -d '\n' > secrets/grafana_admin_password.txt
+	@[ -f secrets/grafana_admin_password.txt ] || openssl rand -hex 24 | tr -d '\n' > secrets/grafana_admin_password.txt
 	@python3 -c "\
 import json; \
 pw = open('secrets/redis_password.txt').read().strip(); \
@@ -42,8 +42,10 @@ down:
 	@./stop.sh down
 
 fclean:
-	@chmod +x ./stop.sh
-	@./stop.sh fclean
+	$(COMPOSE) down -v --remove-orphans
+	@podman rm -rf 2>/dev/null || true
+	@/usr/bin/rm -rf secrets/*.txt secrets/*.json
+	@echo "$(COLOUR_RED)all clean: volumes and secrets removed$(COLOUR_END)"
 
 re: fclean all
 
