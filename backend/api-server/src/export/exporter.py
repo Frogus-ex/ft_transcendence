@@ -1,7 +1,10 @@
 import asyncio
 import logging
+<<<<<<< HEAD
 import io
 import csv
+=======
+>>>>>>> d391ed9 (feat: WIP, implementing data exports)
 from fastapi import APIRouter
 from fastapi.responses import Response, StreamingResponse
 import xml.etree.ElementTree as et
@@ -20,6 +23,7 @@ async def   export_market_data(
     data = await get_candles(symbol, interval, limit)
 
     fmt = format.lower()
+<<<<<<< HEAD
 
     # FastAPI automatically converts into json type by default
     if fmt == 'json':
@@ -50,3 +54,6 @@ async def   export_market_data(
             media_type="application/xml",
             headers={"Content-Disposition": f'attachment; filename="{symbol}.xml'}
         )
+=======
+    ...
+>>>>>>> d391ed9 (feat: WIP, implementing data exports)
