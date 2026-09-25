@@ -8,9 +8,6 @@ type ButtonProps = {
   type: "button" | "submit";
   onClick?: () => void;
   disabled?: boolean;
-};
-
-function Button({ children, variant, size, onClick, type, disabled }: ButtonProps) {
   icon?: boolean;
   shape?: "pill" | "square";
 };
@@ -21,6 +18,7 @@ function Button({
   size,
   onClick,
   type,
+  disabled,
   icon = true,
   shape = "pill",
 }: ButtonProps) {
