@@ -5,6 +5,7 @@ import LoginPage from "../pages/LoginPage";
 import MarketsPage from "../pages/MarketsPage";
 import ContactsPage from "../pages/ContactsPage";
 import ProfilePage from "../pages/ProfilePage";
+import NewUserPage from "../pages/NewUserPage";
 
 const router = createBrowserRouter([
   {
@@ -16,6 +17,7 @@ const router = createBrowserRouter([
       { path: "profile", element: <ProfilePage /> },
       { path: "contacts", element: <ContactsPage /> },
       { path: "markets", element: <MarketsPage /> },
+	  { path: "create_user", element: <NewUserPage /> },
     ],
   },
 ]);
