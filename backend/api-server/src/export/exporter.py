@@ -3,7 +3,7 @@ import logging
 import io
 import csv
 from fastapi import APIRouter
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 import xml.etree.ElementTree as et
 from routers.markets import get_candles
 

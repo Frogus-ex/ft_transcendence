@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.orm import sessionmaker, declarative_base
 from config import DB_URL
 import logging
@@ -12,6 +12,10 @@ engine = create_engine(
     pool_size=10,
     max_overflow=20,
 )
+
+metadata = MetaData()
+
+market_candles = Table("market_candles", metadata, autoload_with=engine)
 
 # Creating sync sessions
 SessionLocal = sessionmaker(
