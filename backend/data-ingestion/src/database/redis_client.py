@@ -1,13 +1,16 @@
-import json
-import redis
+import redis.asyncio as redis
 import logging
-from datetime import datetime
-from tasks import app
 from config import (
     REDIS_HOST,
     REDIS_PORT,
     REDIS_PASSWORD,
+    TIMEFRAMES,
+    MONDAY_ALIGN_MS,
+    RETENTION_MS,
+    OHLC_AGGREGATIONS,
+    DAY_MS,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,27 +27,88 @@ pool = redis.ConnectionPool(
 
 r = redis.Redis(connection_pool=pool)
 
-def date_time_encoder(obj):
-    if isinstance(obj, (datetime)):
-        return obj.isoformat()
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+ts = r.ts()
 
-@app.task(name="save_to_cache_and_publish")
-def save_to_cache_and_publish(data: dict) -> None :
-    """Saving the cleaned data into Redis cache and publish it to FastAPI"""
-    
-    symbol = data["symbol"]
-    key = f"ticker:{symbol}"
-    channel = "market_ticks_channel"
-    message = json.dumps(data, default=date_time_encoder)
 
-    # Saving the cleaned data into json format
+async def	init_timeseries(symbol: str):
+    """Initializing Redis Time Series before listening to streaming pipeline"""
+
+    ticks_key = f"ts:{symbol}:ticks"
+    volume_ticks_key = f"ts:{symbol}:volume_ticks"
+
+    # 24hrs raw ticks conservation
     try:
-        r.set(key, message)
-        r.publish(channel, message)
-    except redis.exceptions.ConnectionError:
+        await ts.create(
+            key=ticks_key,
+            retention_msecs=DAY_MS, # 24hrs in milliseconds
+            duplicate_policy="last", # If same timestamp, save the last
+            labels={"symbol": symbol, "type": "ticks"},
+        )
+        logger.info(f"Redis Time Series '{ticks_key}' series created!")
+    except redis.ResponseError:
+        pass # Key already exists, ignoring
+
+    # Same as above but for volume
+    try:
+        await ts.create(
+            key=volume_ticks_key,
+            retention_msecs=DAY_MS,
+            duplicate_policy="sum", # Adding up instead of overwriting
+            labels={"symbol": symbol, "type": "volume_ticks"},
+        )
+        logger.info(f"Redis Time Series '{volume_ticks_key}' series created!")
+    except redis.ResponseError:
         pass
-    except redis.exceptions.RedisError as e:
-        logger.error(f"Redis Error: {e}")
-    except Exception as e:
-        logger.error(f"Error: {e}")
+
+    # OHLC aggregations for each timeframe
+    for tf_name, bucket_ms in TIMEFRAMES.items():
+        align = MONDAY_ALIGN_MS if tf_name == "1w" else 0
+
+        for field, agg in OHLC_AGGREGATIONS.items():
+            dest_key = f"ts:{symbol}:ohlc:{tf_name}:{field}"
+
+            try:
+                await ts.create(
+                    key=dest_key,
+                    retention_msecs=RETENTION_MS[tf_name],
+                    labels={"symbol": symbol, "timeframe": tf_name, "field": field}
+                )
+                logger.info(f"Redis Time Series '{dest_key}' series created!")
+            except redis.ResponseError:
+                pass
+
+            try:
+                await ts.createrule(
+                    source_key=ticks_key,
+                    dest_key=dest_key,
+                    aggregation_type=agg,
+                    bucket_size_msec=bucket_ms,
+                    align_timestamp=align,
+                )
+                logger.info(f"Redis Time Series '{ticks_key}' compaction rule created!")
+            except redis.ResponseError:
+                pass
+
+        # Same thing for volume
+        volume_dest_key = f"ts:{symbol}:ohlc:{tf_name}:volume"
+        try:
+            await ts.create(
+                key=volume_dest_key,
+                retention_msecs=RETENTION_MS[tf_name],
+                labels={"symbol": symbol, "timeframe": tf_name, "field": "volume"},
+            )
+            logger.info(f"Redis Time Series '{volume_dest_key}' series created!")
+        except redis.ResponseError:
+            pass
+
+        try:
+            await ts.createrule(
+                source_key=volume_ticks_key,
+                dest_key=volume_dest_key,
+                aggregation_type="sum",
+                bucket_size_msec=bucket_ms,
+                align_timestamp=align,
+            )
+            logger.info(f"Redis Time Series '{volume_ticks_key}' compaction rule created!")
+        except redis.ResponseError:
+            pass

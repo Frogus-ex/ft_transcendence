@@ -1,46 +1,43 @@
-from datetime import datetime, timedelta, timezone
+import time
 from typing import List
 from fastapi import Depends, APIRouter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import redis.asyncio as aredis
 
-from database import Ticker, MarketCandle, get_async_session
-from utils import CandleValidation
+from database import MarketCandle, get_async_session
+from utils import CandleValidation, get_redis
+from config import DAY_MS, HOURS_MS, SYMBOLS
+
 
 router = APIRouter(prefix="/api/markets", tags=["Markets"])
 
+
 # For watchlist
 @router.get("")
-async def   get_watchlist(session: AsyncSession = Depends(get_async_session)):
+async def   get_watchlist(r: aredis.Redis = Depends(get_redis)):
     """Gets the latest price of the currency and compare it to the price from 24-hrs ago"""
 
-    now = datetime.now(timezone.utc)
-    day_ago = now - timedelta(hours=24)
-
-    symbols_query = select(Ticker.symbol).distinct()
-    symbols_res = await session.execute(symbols_query)
-    symbols = symbols_res.scalars().all()
+    ts = r.ts()
+    now_ms = int(time.time() * 1000)
+    day_ago = ((now_ms - DAY_MS) // HOURS_MS) * HOURS_MS
 
     watchlist = []
 
-    for symbol in symbols:
+    for symbol in SYMBOLS:
         # Getting the latest price of each currency
-        latest_query = (
-            select(Ticker.price)
-            .where(Ticker.symbol == symbol)
-            .order_by(Ticker.timestamp.desc())
-            .limit(1)
+        last = await ts.get(f"ts:{symbol}:ticks")
+        ref = await ts.range(
+            f"ts:{symbol}:ohlc:1h:close",
+            day_ago,
+            day_ago,
         )
-        latest_price = (await session.execute(latest_query)).scalar()
 
-        # Getting the oldest price (24-hrs ago) of each currency
-        old_query = (
-            select(Ticker.price)
-            .where(Ticker.symbol == symbol, Ticker.timestamp <= day_ago)
-            .order_by(Ticker.timestamp.desc())
-            .limit(1)
-        )
-        old_price = (await session.execute(old_query)).scalar()
+        if not last:
+            continue
+
+        latest_price = last[1]
+        old_price = ref[0][1] if ref else None
 
         # Calculating price variation in percentage
         if latest_price and old_price and old_price > 0:
@@ -55,6 +52,7 @@ async def   get_watchlist(session: AsyncSession = Depends(get_async_session)):
         })
 
     return watchlist
+
 
 # HTTP Ticker, main graph (Database)
 @router.get("/{symbol}/candles", response_model=List[CandleValidation])

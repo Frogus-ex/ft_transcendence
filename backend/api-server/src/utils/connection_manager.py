@@ -1,5 +1,6 @@
 from typing import Any
-from fastapi import WebSocket
+from fastapi import WebSocket, Request
+import redis.asyncio as aredis
 
 class ConnectionManager:
     """Manages WebSocket connections and broadcasts messages to all connected clients"""
@@ -26,3 +27,9 @@ class ConnectionManager:
                     self.disconnect(connection)
 
 manager = ConnectionManager()
+
+
+def get_redis(request: Request) -> aredis.Redis:
+    """Retrieve the Redis client stored in app.state"""
+
+    return request.app.state.redis_client

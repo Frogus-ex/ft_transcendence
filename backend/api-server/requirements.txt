@@ -1,5 +1,5 @@
 # Database (Redis & PostgreSQL)
-redis==6.4.0
+redis>=5.0.1
 asyncpg==0.31.0
 
 # ORM for database (SQLAlchemy)

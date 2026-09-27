@@ -1,5 +1,5 @@
 from services import listen_stream
-from database import init_db_pool, close_db_pool
+from database import init_db_pool, close_db_pool, init_timeseries
 import asyncio
 import logging
 import signal
@@ -25,6 +25,11 @@ async def run_ingestion():
 	Note: DB init/cleanup and processing are handled as Celery tasks; this
 	function only feeds messages into Celery workers.
 	"""
+
+	# Initializing Redis Time Series for each currency (for aggregate operations)
+	for stream in streams:
+		await init_timeseries(stream["symbol"])
+	logging.info("All Redis Time Series series and compaction rules created!")
 
 	loop = asyncio.get_running_loop()
 	stop_event = asyncio.Event()

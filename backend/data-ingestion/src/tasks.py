@@ -18,10 +18,10 @@ else:
 app = Celery('trading_tasks',
              broker=broker_url,
              backend=backend_url,
-             include=['calculations.operations',
-                      'database.db_client',
+             include=['database.db_client',
                       'database.redis_client',
-                      'services.dispatcher'])
+                      'services.dispatcher',
+                      ])
 
 app.conf.update(
     task_serializer='json',
