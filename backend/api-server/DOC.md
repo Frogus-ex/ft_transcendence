@@ -19,144 +19,78 @@ This stack is designed to support both:
 
 ## How the structure works
 
-The application is organized around a few clear responsibilities:
+The API server is a real-time market data layer that connects the ingestion pipeline to the frontend. Its role is to bridge three things together:
 
-- `main.py`: initializes app startup, creates the Redis client, and subscribes to the message channel
-- `config.py`: loads environment variables and builds the connection URLs used by Redis and PostgreSQL
-- `routers/markets.py`: provides the watchlist and candles routes
-- `routers/websockets.py`: handles client WebSocket connections
-- `utils/connection_manager.py`: manages connected clients and broadcasts messages
-- `database/`: contains the async database session and ORM models
+- Redis, which holds the live stream of market updates;
+- PostgreSQL, which stores the structured market history and candle data;
+- the browser, which consumes live prices and chart data through REST and WebSocket endpoints.
 
-The end-to-end flow is straightforward:
+At a high level, the architecture is simple:
 
-1. The ingestion layer publishes market updates to Redis.
-2. The API server subscribes to that Redis channel during startup.
-3. Incoming messages are forwarded to all active WebSocket clients.
-4. The frontend consumes live data through `/ws/markets/{symbol}`.
-5. Historical and aggregated values are served through HTTP endpoints from PostgreSQL.
+1. The ingestion layer publishes raw market updates to Redis.
+2. The API server starts a Redis subscription during its FastAPI lifespan.
+3. Each incoming message is broadcast to all active WebSocket clients.
+4. The frontend receives live prices in real time through `/ws/markets/{symbol}`.
+5. The REST layer reads the latest watchlist data and the candle history from PostgreSQL for the dashboard and charts.
 
-## Application startup and async lifespan
+This separation keeps the system efficient: the live stream stays lightweight and responsive, while the database is used for persistent and historical data access.
 
-The server uses an asynchronous `lifespan` context manager in `main.py` to initialize everything required before FastAPI begins serving requests.
+## Application startup and lifecycle
 
-This pattern is important because it ensures the application is fully configured before the server starts accepting client traffic. The lifecycle works like this:
+The API server initializes itself in a controlled async lifecycle defined in `main.py`.
 
-- create a Redis connection pool from the URL built in `config.py`;
-- create a Redis client bound to that pool;
-- subscribe to the Redis channel used by the data producer (`market_ticks_channel`);
-- start a background listener task that waits for incoming messages;
-- `yield` control to FastAPI so the app can handle HTTP/WebSocket requests;
-- on shutdown, cancel the listener task and properly close the Redis pool.
+During startup, it:
 
-This design lets the API be ready for real-time streaming as soon as it starts, without repeated per-request connection setup.
+- creates the Redis connection pool using the values loaded from `config.py`;
+- opens the Redis client;
+- subscribes to the channel used by the ingestion layer (`market_ticks_channel`);
+- starts a background listener task to process incoming stream messages;
+- yields control to FastAPI so HTTP and WebSocket routes can run.
 
-### Redis listening task
+When the app shuts down, it cancels the listener task and closes the Redis pool cleanly. This ensures the server is ready to stream data as soon as it starts, without reconnecting on every request.
 
-Inside the lifespan hook, the API creates a `redis_listener()` coroutine that subscribes to the channel and waits for messages:
+The important part is that the Redis listener is not part of the request path. It runs in the background while the application remains available to serve both REST and WebSocket traffic.
 
-```python
-pubsub = redis_client.pubsub()
-await pubsub.subscribe("market_ticks_channel")
-```
+## WebSocket and live streaming flow
 
-Then, for each incoming Redis message:
+The live WebSocket pipeline is managed through a central `ConnectionManager` in `utils/connection_manager.py`.
 
-```python
-if message and message["type"] == "message":
-    data = message["data"]
-    await manager.broadcast(message=data)
-```
-
-This is the critical bridge between the Redis publisher and the frontend. The service listens to the live stream and forwards each message to all connected users in real time.
-
-## WebSocket connection manager
-
-The WebSocket logic is centralized in `utils/connection_manager.py`.
-
-The `ConnectionManager` class is responsible for:
+That manager is responsible for:
 
 - accepting client connections;
-- storing active WebSocket sessions;
+- keeping a set of currently connected sockets;
 - removing disconnected clients;
-- broadcasting one Redis message to every connected client.
+- sending incoming messages to every active client.
 
-The implementation keeps a set of active sockets:
+In practice, the flow is:
 
-```python
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: Set[WebSocket] = set()
-```
+- a browser opens `/ws/markets/{symbol}`;
+- the server accepts the connection and stores it in the manager;
+- Redis publishes a new market update;
+- the background subscriber receives it;
+- the manager broadcasts it to all clients connected to that endpoint.
 
-When a browser connects to `/ws/markets/{symbol}`, the server accepts the socket and adds it to this set. Then every Redis message is sent to each connected client using `broadcast()`.
+This gives the frontend a push-based market stream without continuous polling.
 
-This avoids polling and provides a clean push-based update model for the frontend.
+## REST layer and data access
 
-## WebSocket route
+The HTTP layer in `routers/markets.py` provides the data the UI needs outside the live stream:
 
-The WebSocket endpoint is defined in `routers/websockets.py`:
+- the watchlist endpoint returns the latest price and 24-hour variation for tracked currencies;
+- the candle endpoint returns historical OHLC data for chart rendering.
 
-```python
-@router.websocket("/markets/{symbol}")
-async def ws_market_data(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-```
+These endpoints read from PostgreSQL, while the live stream itself is powered by Redis. In other words, Redis is used for immediate updates, and PostgreSQL is used for structured, persistent market history.
 
-This endpoint keeps the WebSocket alive while the client is connected. It does not compute the market data itself; it acts as a live relay between Redis and the frontend browser.
+## Global architecture summary
 
-## REST API for market data
+The API server behaves like a presentation layer for the market data platform:
 
-The REST layer in `routers/markets.py` is split between two core endpoints.
+- Redis powers the real-time event stream;
+- PostgreSQL stores the structured market state and historical trend data;
+- WebSockets deliver live updates to the browser;
+- REST endpoints expose watchlist and chart data to the frontend.
 
-### Watchlist endpoint
-
-The `GET /api/markets` route fetches the latest price for each tracked symbol and compares it with the price from 24 hours earlier.
-
-For each symbol, the function:
-
-- selects the most recent tick price;
-- selects the oldest tick in the last 24-hour window;
-- calculates the percentage change;
-- returns the result in JSON for the frontend watchlist.
-
-At the moment, the project currently tracks a single currency, but the structure is ready to expand to multiple symbols without changing the overall design.
-
-### Candle endpoint
-
-The `GET /api/markets/{symbol}/candles` route retrieves historical OHLC data from the `market_candles` table.
-
-The route accepts:
-
-- `symbol`: the asset symbol (for example `BTCUSDT`)
-- `interval`: the candle interval (`1m`, `5m`, `1h`, etc.)
-- `limit`: the number of candles to return
-
-The query selects the matching records from PostgreSQL, orders them by time, and returns them in chronological order for chart rendering.
-
-This is the endpoint the frontend uses so it can draw the market graph using the open/high/low/close values from the candle dataset.
-
-## Data flow in practice
-
-The full architecture is:
-
-1. Market data is ingested and published to Redis.
-2. The API server subscribes to the Redis channel at startup.
-3. Redis messages are received by the background listener.
-4. The listener broadcasts the payload to all connected WebSocket clients.
-5. The frontend receives live updates through the WebSocket.
-6. The REST API reads structured data from PostgreSQL for watchlist and historical candle requests.
-
-This separation is useful because:
-
-- live updates are streamed in real time through WebSockets;
-- historical data is read from the database in a structured way;
-- Redis acts as the event layer between ingestion and presentation.
+This design makes the service easy to manage globally: it keeps the live pipeline fast, the historical data accessible, and the frontend independent from the underlying storage and streaming systems.
 
 ## Debug and testing
 
