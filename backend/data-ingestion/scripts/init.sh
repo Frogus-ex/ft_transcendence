@@ -17,24 +17,10 @@ fi
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_ADMIN_USER" --dbname "$POSTGRES_DB" <<-EOSQL
 
-    -- Initializing the table to store cleaned data
-    CREATE TABLE IF NOT EXISTS market_ticks (
-        id SERIAL PRIMARY KEY,
-        symbol VARCHAR(20) NOT NULL,
-        price DECIMAL(18, 8) NOT NULL,
-        quantity DECIMAL(18, 8) NOT NULL,
-        timestamp TIMESTAMP NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-
-    -- Creating index for faster queries on symbol and timestamp
-    CREATE INDEX IF NOT EXISTS idx_ticks_symbol_timestamp
-    ON market_ticks(symbol, timestamp DESC);
-
     -- Initializing the table to store calculated data (candles)
     CREATE TABLE IF NOT EXISTS market_candles (
         id SERIAL PRIMARY KEY,
-        symbol VARCHAR(20) NOT NULL,
+        symbol VARCHAR(20) UNIQUE NOT NULL,
         interval VARCHAR(5) NOT NULL,
         time TIMESTAMP NOT NULL,
         open DECIMAL(18, 8) NOT NULL,

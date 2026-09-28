@@ -40,15 +40,16 @@ async def   lifespan(app: FastAPI):
         logging.info("Redis connection pool created!")
 
         # Creating Redis client
-        redis_client = aredis.Redis(connection_pool=app.state.redis_pool)
+        app.state.redis_client = aredis.Redis(connection_pool=app.state.redis_pool)
         logging.info("Redis client created!")
     except Exception as e:
         logging.error(f"Failed to initialize Redis: {e}")
+        raise
 
     # Redis listening to ticks (Background Task)
     async def redis_listener():
         channel = "market_ticks_channel"
-        pubsub = redis_client.pubsub()
+        pubsub = app.state.redis_client.pubsub()
         await pubsub.subscribe(channel)
         logging.info("Subscribed to Redis channels!")
 
@@ -81,9 +82,12 @@ async def   lifespan(app: FastAPI):
     # Closing cleanly the server
     logging.info("Closing API server...")
     listener_task.cancel()
+    await app.state.redis_client.aclose()
     await app.state.redis_pool.disconnect()
 
+
 app = FastAPI(title="Stock Market Data API", lifespan=lifespan)
+
 
 # FastAPI global exception handler for SQLAlchemy errors
 @app.exception_handler(SQLAlchemyError)
@@ -93,6 +97,7 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
         status_code=500,
         content={"message": "Internal server error. Please try again later."},
     )
+
 
 app.include_router(markets.router)
 app.include_router(websockets.router)

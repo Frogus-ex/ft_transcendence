@@ -2,6 +2,7 @@ import asyncio
 import logging
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import io
 import csv
 =======
@@ -10,8 +11,12 @@ import csv
 import io
 import csv
 >>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
+=======
+import io
+import csv
+>>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
 from fastapi import APIRouter
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 import xml.etree.ElementTree as et
 from routers.markets import get_candles
 
@@ -30,8 +35,11 @@ async def   export_market_data(
     fmt = format.lower()
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
+=======
+>>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
 
     # FastAPI automatically converts into json type by default
     if fmt == 'json':
@@ -62,6 +70,7 @@ async def   export_market_data(
             media_type="application/xml",
             headers={"Content-Disposition": f'attachment; filename="{symbol}.xml'}
 <<<<<<< HEAD
+<<<<<<< HEAD
         )
 =======
     ...
@@ -69,3 +78,6 @@ async def   export_market_data(
 =======
         )
 >>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
+=======
+        )
+>>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
