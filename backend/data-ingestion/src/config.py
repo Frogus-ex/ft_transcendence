@@ -54,6 +54,7 @@ else:
 
 
 TIMEFRAMES = {
+    "1m": 60 * 1000,                # 60 000 ms
     "15m": 15 * 60 * 1000,          # 900 000 ms
     "1h": 60 * 60 * 1000,           # 3 600 000 ms
     "4h": 4 * 60 * 60 * 1000,       # 14 400 000 ms
@@ -68,6 +69,7 @@ MONDAY_ALIGN_MS = 345_600_000
 # Retention days before removing the old data
 DAY_MS = 24 * 60 * 60 * 1000
 RETENTION_MS = {
+    "1m": 15 * DAY_MS,              # 15 days
     "15m": 30 * DAY_MS,             # 30 days
     "1h": 90 * DAY_MS,              # 90 days
     "4h": 365 * DAY_MS,             # 1 year
@@ -81,3 +83,5 @@ OHLC_AGGREGATIONS = {
     "low": "min",
     "close": "last",
 }
+
+SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT"]

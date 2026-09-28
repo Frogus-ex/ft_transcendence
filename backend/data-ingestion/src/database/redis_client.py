@@ -19,7 +19,7 @@ pool = redis.ConnectionPool(
     host=REDIS_HOST,
     port=REDIS_PORT,
     username="default",
-    password=REDIS_PASSWORD,
+    password=REDIS_PASSWORD or None,
     db=0,
     decode_responses=True,
     protocol=2
@@ -44,7 +44,7 @@ async def	init_timeseries(symbol: str):
             duplicate_policy="last", # If same timestamp, save the last
             labels={"symbol": symbol, "type": "ticks"},
         )
-        logger.info(f"Redis Time Series '{ticks_key}' series created!")
+        logger.debug(f"Redis Time Series '{ticks_key}' series created!")
     except redis.ResponseError:
         pass # Key already exists, ignoring
 
@@ -56,7 +56,7 @@ async def	init_timeseries(symbol: str):
             duplicate_policy="sum", # Adding up instead of overwriting
             labels={"symbol": symbol, "type": "volume_ticks"},
         )
-        logger.info(f"Redis Time Series '{volume_ticks_key}' series created!")
+        logger.debug(f"Redis Time Series '{volume_ticks_key}' series created!")
     except redis.ResponseError:
         pass
 
@@ -73,7 +73,7 @@ async def	init_timeseries(symbol: str):
                     retention_msecs=RETENTION_MS[tf_name],
                     labels={"symbol": symbol, "timeframe": tf_name, "field": field}
                 )
-                logger.info(f"Redis Time Series '{dest_key}' series created!")
+                logger.debug(f"Redis Time Series '{dest_key}' series created!")
             except redis.ResponseError:
                 pass
 
@@ -85,7 +85,7 @@ async def	init_timeseries(symbol: str):
                     bucket_size_msec=bucket_ms,
                     align_timestamp=align,
                 )
-                logger.info(f"Redis Time Series '{ticks_key}' compaction rule created!")
+                logger.debug(f"Redis Time Series '{ticks_key}' compaction rule created!")
             except redis.ResponseError:
                 pass
 
@@ -97,7 +97,7 @@ async def	init_timeseries(symbol: str):
                 retention_msecs=RETENTION_MS[tf_name],
                 labels={"symbol": symbol, "timeframe": tf_name, "field": "volume"},
             )
-            logger.info(f"Redis Time Series '{volume_dest_key}' series created!")
+            logger.debug(f"Redis Time Series '{volume_dest_key}' series created!")
         except redis.ResponseError:
             pass
 
@@ -109,6 +109,6 @@ async def	init_timeseries(symbol: str):
                 bucket_size_msec=bucket_ms,
                 align_timestamp=align,
             )
-            logger.info(f"Redis Time Series '{volume_ticks_key}' compaction rule created!")
+            logger.debug(f"Redis Time Series '{volume_ticks_key}' compaction rule created!")
         except redis.ResponseError:
             pass

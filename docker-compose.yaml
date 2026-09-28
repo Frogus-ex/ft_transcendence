@@ -85,13 +85,44 @@ services:
     networks:
       - transcendence_net
 
-  celery:
+  celery-worker:
     build:
       context: ./backend/data-ingestion
       dockerfile: Dockerfile
-    container_name: transcendence_celery
+    container_name: transcendence_celery_worker
     restart: unless-stopped
-    command: celery -A src.tasks worker --loglevel=WARNING
+    command: celery -A src.tasks worker --loglevel=INFO
+    env_file:
+      - .env
+    environment:
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - postgres_ingest_password
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
+  celery-beat:
+    build:
+      context: ./backend/data-ingestion
+      dockerfile: Dockerfile
+    container_name: transcendence_celery_beat
+    restart: unless-stopped
+    command: celery -A src.tasks beat --loglevel=INFO
     env_file:
       - .env
     environment:

@@ -14,9 +14,9 @@ DEF='\e[0m'
 
 MODE="${1:-down}"
 
-CONTAINERS=("transcendence_ingestion" "transcendence_celery")
+CONTAINERS=("transcendence_ingestion" "transcendence_celery_worker" "transcendence_celery_beat")
 
-echo -e "${YEL}==> Stopping data pipeline services first (${CONTAINERS[0]}, ${CONTAINERS[1]})...${DEF}"
+echo -e "${YEL}==> Stopping data pipeline services first (${CONTAINERS[0]}, ${CONTAINERS[1]}, ${CONTAINERS[2]})...${DEF}"
 for CONTAINER in "${CONTAINERS[@]}"; do
     if [ "$(podman ps -q -f name=^/${CONTAINER}$)" ]; then
         echo -e "${YEL}Stopping ${CONTAINER} container...${DEF}"
