@@ -37,7 +37,8 @@ services:
     image: redis/redis-stack-server:7.2.0-v10
     container_name: transcendence_redis
     restart: unless-stopped
-    command: sh -c 'export REDIS_ARGS="--requirepass $$(cat /run/secrets/redis_password)" && /entrypoint.sh'
+    init: true
+    command: sh -c 'export REDIS_ARGS="--requirepass $$(cat /run/secrets/redis_password)" && exec /entrypoint.sh'
     environment:
       REDIS_HOST: redis
       REDIS_PASSWORD_FILE: /run/secrets/redis_password

@@ -15,7 +15,7 @@ The EtLT approach gives the best trade-off:
 - Extract: fetch live trade data from the Binance API.
 - Transform-Light: clean, validate, and normalize only the fields that matter (`symbol`, `price`, `quantity`, `timestamp`).
 - Load: persist the lightweight cleaned data into Redis and PostgreSQL for fast access and persistence.
-- Transform-Heavy: compute aggregates such as OHLC candles in a separate processing stage for analytics and visualization.
+- Transform-Heavy: compute aggregates such as OHLC candles directly in Redis Time Series, which performs the time-bucketing and aggregation natively for analytics and visualization.
 
 ### Pipeline comparison
 
@@ -53,8 +53,6 @@ src/
 ├── main.py
 ├── config.py
 ├── tasks.py
-├── calculations/
-│   └── operations.py
 ├── scripts/
 │   └── init.sh
 ├── services/
@@ -65,6 +63,7 @@ src/
 └── database/
 	├── __init__.py
 	├── redis_client.py
+	├── redis_work.py
 	├── db_client.py
 	├── orm_db.py
 	└── models.py
@@ -78,10 +77,10 @@ The ingestion architecture is built around a simple, scalable pipeline:
 2. Each listener connects to its stream, receives trade events in real time, and keeps the connection alive with automatic reconnection if it drops.
 3. The raw payload is validated and normalized in the parsing stage to retain only the fields needed for the platform.
 4. The cleaned data is sent to Redis for low-latency access and to PostgreSQL for persistence.
-5. Heavy aggregation and candle-generation logic is intentionally deferred to the Celery-based calculations layer, which will run in `calculations/operations.py`.
+5. Time-bucketed aggregation and candle generation are handled by Redis Time Series rather than a custom Python-heavy transformation layer.
 6. The frontend consumes both the live feed and the derived aggregated time-series data needed for chart rendering and watchlist updates.
 
-This keeps the real-time ingestion layer fast, while leaving heavier transformations to a separate processing stage.
+This keeps the real-time ingestion layer fast, while letting Redis perform the interval-based aggregation directly in the time-series store.
 
 ## Project Architecture
 
@@ -92,10 +91,10 @@ The project is organized in a way that separates streaming, storage, and analyti
 - `services/parser.py` normalizes incoming message payloads.
 - `services/dispatcher.py` sends the cleaned data to Redis and persists selected records in PostgreSQL.
 - `database/` handles persistent storage and ORM models.
+- `database/redis_work.py` manages the Redis Time Series interactions used for bucketed market data and OHLC-style queries.
 - `tasks.py` initializes the Celery worker configuration and task registry.
-- `calculations/operations.py` is reserved for the heavier aggregation work, currently empty and ready for the data scientist.
 
-This separation keeps the streaming path lightweight, stable, and easier to scale as more market pairs or aggregation windows are added.
+This separation keeps the streaming path lightweight, stable, and easier to scale as more market pairs or aggregation windows are added, while leaving the interval-based computations to Redis Time Series.
 
 ## PostgreSQL
 
@@ -106,8 +105,8 @@ The project provides separate PostgreSQL users for different responsibilities:
 | User | Role | Purpose | Typical privileges |
 | --- | --- | --- | --- |
 | `transcendence_user` | Administrator | Initializes or changes the database schema | All privileges |
-| `ingest_user` | Ingestion | Writes data from the pipeline | `INSERT`, `SELECT` |
-| `reader_user` | Read-only | Reads data and performs aggregate queries | `SELECT` |
+| `ingest_user` | Ingestion | Writes data from the pipeline | `INSERT`, `SELECT`, `UPDATE` |
+| `reader_user` | Read-only | Reads data | `SELECT` |
 
 Do not use `transcendence_user` for normal application work. Use `reader_user` for investigations and queries, and reserve `ingest_user` for ingestion operations.
 
@@ -136,7 +135,17 @@ AUTH REDIS_PASSWORD
 The latest cached ticker can be read with:
 
 ```text
-GET ticker:BTCUSDT
+TS.GET ts:{symbol}:ticks
+It will return (timestamp, value) where timestamp is in millisecond since epoch (01/01/1970 00:00) and value in US Dollars.
+
+GET cache:{symbol}:latest
+It will return the full JSON of the latest cached price.
+```
+
+If you want the full detail OHLC of each timeframe (1m, 15m, 1h, 4h, 1d, 1w) of one currency:
+
+```text
+TS.INFO ts:{symbol}:ticks
 ```
 
 If `MONITOR` is interrupted with `Ctrl+C`, authenticate again before running another command.
