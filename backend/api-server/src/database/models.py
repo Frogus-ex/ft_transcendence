@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import Index, Numeric, String, DateTime, func
+from sqlalchemy import Index, Numeric, String, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from .orm_db import Base
 
@@ -19,6 +19,7 @@ class MarketCandle(Base):
     volume: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
 
     __table_args__ = (
+        UniqueConstraint("symbol", "interval", "time", name="uq_candles_symbol_interval_time"),
         Index("idx_candles_symbol_time", "symbol", time.desc()),
     )
 

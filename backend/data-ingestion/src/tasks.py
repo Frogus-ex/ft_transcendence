@@ -1,10 +1,12 @@
 from celery import Celery
+from celery.signals import after_setup_logger
 from config import (
     REDIS_HOST,
     REDIS_PORT,
     REDIS_PASSWORD,
 )
 from urllib.parse import quote_plus
+import logging
 
 if REDIS_PASSWORD:
     enc = quote_plus(REDIS_PASSWORD)
@@ -20,6 +22,7 @@ app = Celery('trading_tasks',
              backend=backend_url,
              include=['database.db_client',
                       'database.redis_client',
+                      'database.redis_work',
                       'services.dispatcher',
                       ])
 
@@ -33,6 +36,31 @@ app.conf.update(
     task_acks_late=True,
 )
 
+app.conf.beat_schedule = {
+    "persist-closed-candles": {
+        "task": "persist_all_closed_candles",
+        "schedule": 60.0, # Every minute
+    }
+}
+
 # For shutting down the data pipeline
 app.conf.broker_connection_retry_on_startup = False
 app.conf.task_publish_retry = False
+
+
+class IgnoreTaskSuccessfull(logging.Filter):
+    """Ignore Celery successful tasks"""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "succeeded in " in message and "Task" in message:
+            return False
+        elif "received" in message and "Task" in message:
+            return False
+        return True
+
+
+@after_setup_logger.connect
+def setup_celery_logging(logger, **kwargs):
+    for handler in logger.handlers:
+        handler.addFilter(IgnoreTaskSuccessfull())
