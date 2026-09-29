@@ -1,5 +1,3 @@
-# To Update
-
 # Data Ingestion Backend
 
 The ingestion backend follows an EtLT pipeline (Extract, Transform-Light, Load, Transform-Heavy). It connects to the Binance WebSocket, extracts live market events, performs a lightweight validation and normalization step, stores the cleaned data in Redis and PostgreSQL, and then performs heavier transformations later to generate derived market data for the frontend.
@@ -50,51 +48,78 @@ The EtLT approach gives the best trade-off:
 
 ```text
 src/
-├── main.py
-├── config.py
-├── tasks.py
-├── scripts/
-│   └── init.sh
-├── services/
+├── bootstrap/
 │   ├── __init__.py
-│   ├── listener.py
-│   ├── parser.py
-│   └── dispatcher.py
-└── database/
-	├── __init__.py
-	├── redis_client.py
-	├── redis_work.py
-	├── db_client.py
-	├── orm_db.py
-	└── models.py
+│   ├── main.py
+│   ├── celery/
+│   │   ├── __init__.py
+│   │   └── tasks.py
+│   ├── postgres/
+│   │   ├── __init__.py
+│   │   └── db_init.py
+│   └── redis/
+│       ├── __init__.py
+│       ├── redis_async_init.py
+│       └── redis_sync_init.py
+├── config/
+│   ├── __init__.py
+│   └── env.py
+├── domain/
+│   └── market/
+│       ├── __init__.py
+│       ├── models.py
+│       ├── symbols.py
+│       └── timeframes.py
+├── ingestion/
+│   ├── __init__.py
+│   ├── pipelines/
+│   │   ├── __init__.py
+│   │   └── parser.py
+│   ├── tasks/
+│   │   ├── __init__.py
+│   │   └── dispatcher.py
+│   └── websockets/
+│       ├── __init__.py
+│       └── listener.py
+└── storage/
+    ├── __init__.py
+    ├── postgres/
+    │   ├── __init__.py
+    │   └── orm_db.py
+    └── redis/
+        ├── __init__.py
+        ├── tick_store.py
+        └── candle_store.py
 ```
 
 ## Data Flow
 
 The ingestion architecture is built around a simple, scalable pipeline:
 
-1. The application starts one Binance WebSocket listener per symbol using an `asyncio.TaskGroup` in `main.py`.
-2. Each listener connects to its stream, receives trade events in real time, and keeps the connection alive with automatic reconnection if it drops.
-3. The raw payload is validated and normalized in the parsing stage to retain only the fields needed for the platform.
-4. The cleaned data is sent to Redis for low-latency access and to PostgreSQL for persistence.
-5. Time-bucketed aggregation and candle generation are handled by Redis Time Series rather than a custom Python-heavy transformation layer.
-6. The frontend consumes both the live feed and the derived aggregated time-series data needed for chart rendering and watchlist updates.
+1. The application starts one Binance WebSocket listener per symbol using an `asyncio.TaskGroup` in `bootstrap/main.py`.
+2. Each listener connects to its stream, receives trade events in real time, and reconnects automatically if the socket drops.
+3. The raw payload is normalized in `ingestion/pipelines/parser.py` to retain only the fields required by the platform.
+4. The cleaned data is queued through Celery tasks and dispatched to Redis for low-latency access and publication.
+5. Redis Time Series stores the live tick stream and the interval-based aggregate series, while the frontend reads the latest value and the derived candle buckets.
+6. Closed candle windows are periodically flushed into PostgreSQL for longer-term storage and historical queries.
 
-This keeps the real-time ingestion layer fast, while letting Redis perform the interval-based aggregation directly in the time-series store.
+This keeps the real-time ingestion path fast while moving heavy aggregation to the storage layer where Redis Time Series can do the bucketing natively.
 
 ## Project Architecture
 
-The project is organized in a way that separates streaming, storage, and analytics responsibilities:
+The refactored project is organized by responsibility, with clear separation between startup, ingestion, and storage concerns:
 
-- `main.py` orchestrates the multi-stream ingestion startup.
-- `services/listener.py` is responsible for maintaining each Binance connection.
-- `services/parser.py` normalizes incoming message payloads.
-- `services/dispatcher.py` sends the cleaned data to Redis and persists selected records in PostgreSQL.
-- `database/` handles persistent storage and ORM models.
-- `database/redis_work.py` manages the Redis Time Series interactions used for bucketed market data and OHLC-style queries.
-- `tasks.py` initializes the Celery worker configuration and task registry.
+- `bootstrap/main.py` initializes the Redis Time Series backing store and starts one listener per configured symbol.
+- `ingestion/websockets/listener.py` maintains each Binance WebSocket connection and keeps the stream alive with reconnect logic.
+- `ingestion/pipelines/parser.py` converts the raw Binance event into a compact, validated payload.
+- `ingestion/tasks/dispatcher.py` queues the cleaned data for async processing.
+- `storage/redis/tick_store.py` writes the latest cache entry, stores tick and volume points in Redis Time Series, and publishes live updates to the market channel.
+- `storage/redis/candle_store.py` computes the latest closed OHLC buckets and persists them to PostgreSQL.
+- `bootstrap/celery/tasks.py` configures the Celery app, beat schedule, and task registration for the ingestion pipeline.
+- `storage/postgres/orm_db.py` defines the SQLAlchemy connection layer used by the candle persistence path.
+- `bootstrap/redis/*.py` handles the Redis client setup and Time Series initialization used across the service.
 
-This separation keeps the streaming path lightweight, stable, and easier to scale as more market pairs or aggregation windows are added, while leaving the interval-based computations to Redis Time Series.
+This keeps the live stream lightweight and predictable, while leaving the interval-based candle generation to Redis Time Series and the periodic Celery workers that flush completed buckets into PostgreSQL.
 
 ## PostgreSQL
 

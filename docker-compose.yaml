@@ -22,7 +22,7 @@ services:
       - postgres_ingest_password
       - postgres_readonly_password
     volumes:
-      - ./backend/data-ingestion/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ./backend/data-ingestion/src/bootstrap/postgres/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
@@ -65,6 +65,7 @@ services:
     env_file:
       - .env
     environment:
+      PYTHONPATH: /app
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 
@@ -92,10 +93,11 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_celery_worker
     restart: unless-stopped
-    command: celery -A src.tasks worker --loglevel=INFO
+    command: celery -A src.bootstrap.celery.tasks worker --loglevel=INFO
     env_file:
       - .env
     environment:
+      PYTHONPATH: /app
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 
@@ -123,10 +125,11 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_celery_beat
     restart: unless-stopped
-    command: celery -A src.tasks beat --loglevel=INFO
+    command: celery -A src.bootstrap.celery.tasks beat --loglevel=INFO
     env_file:
       - .env
     environment:
+      PYTHONPATH: /app
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 

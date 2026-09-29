@@ -28,7 +28,7 @@ import json; \
 pw = open('secrets/redis_password.txt').read().strip(); \
 json.dump({'redis://redis:6379': pw}, open('secrets/redis_exporter_password.json', 'w'))"
 	@chmod 644 ./secrets/*.txt ./secrets/*.json
-	@chmod +x ./backend/data-ingestion/scripts/init.sh
+	@chmod +x ./backend/data-ingestion/src/bootstrap/postgres/scripts/init.sh
 	@chmod +x ./stop.sh
 	@echo "$(COLOUR_GREEN)✅ secrets/ ready$(COLOUR_END)"
 

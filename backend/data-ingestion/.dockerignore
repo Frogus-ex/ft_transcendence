@@ -1,5 +1,6 @@
-./src/__pycache__
-*.pyc
+**/__pycache__/
+**/*.py[cod]
 .venv/
 .env
 .git
+**/.pytest_cache/
