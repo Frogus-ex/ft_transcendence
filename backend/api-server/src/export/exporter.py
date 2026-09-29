@@ -1,13 +1,34 @@
 import asyncio
 import logging
+<<<<<<< HEAD
+import io
+import csv
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+import io
+import csv
+=======
+<<<<<<< HEAD
+>>>>>>> feature/ingestion-test
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> develop
 import io
 import csv
 import io
 import csv
 import io
 import csv
-import io
-import csv
+<<<<<<< HEAD
+=======
+>>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
+<<<<<<< HEAD
+=======
+>>>>>>> develop
+>>>>>>> feature/ingestion-test
+>>>>>>> develop
 from fastapi import APIRouter
 from fastapi.responses import Response
 import xml.etree.ElementTree as et
@@ -26,6 +47,25 @@ async def   export_market_data(
     data = await get_candles(symbol, interval, limit)
 
     fmt = format.lower()
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+<<<<<<< HEAD
+>>>>>>> feature/ingestion-test
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
+=======
+>>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
+<<<<<<< HEAD
+=======
+>>>>>>> develop
+>>>>>>> feature/ingestion-test
+>>>>>>> develop
 
     # FastAPI automatically converts into json type by default
     if fmt == 'json':
@@ -55,3 +95,28 @@ async def   export_market_data(
             content=xml_str,
             media_type="application/xml",
             headers={"Content-Disposition": f'attachment; filename="{symbol}.xml'}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        )
+=======
+<<<<<<< HEAD
+>>>>>>> feature/ingestion-test
+<<<<<<< HEAD
+        )
+=======
+    ...
+>>>>>>> d391ed9 (feat: WIP, implementing data exports)
+=======
+        )
+>>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
+=======
+        )
+>>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
+<<<<<<< HEAD
+=======
+>>>>>>> develop
+>>>>>>> feature/ingestion-test
+>>>>>>> develop
