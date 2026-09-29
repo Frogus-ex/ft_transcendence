@@ -2,6 +2,13 @@ import asyncio
 import logging
 <<<<<<< HEAD
 <<<<<<< HEAD
+=======
+import io
+import csv
+=======
+<<<<<<< HEAD
+>>>>>>> feature/ingestion-test
+<<<<<<< HEAD
 <<<<<<< HEAD
 import io
 import csv
@@ -15,6 +22,10 @@ import csv
 import io
 import csv
 >>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
+<<<<<<< HEAD
+=======
+>>>>>>> develop
+>>>>>>> feature/ingestion-test
 from fastapi import APIRouter
 from fastapi.responses import Response
 import xml.etree.ElementTree as et
@@ -35,11 +46,20 @@ async def   export_market_data(
     fmt = format.lower()
 <<<<<<< HEAD
 <<<<<<< HEAD
+=======
+=======
+<<<<<<< HEAD
+>>>>>>> feature/ingestion-test
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 >>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
 =======
 >>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
+<<<<<<< HEAD
+=======
+>>>>>>> develop
+>>>>>>> feature/ingestion-test
 
     # FastAPI automatically converts into json type by default
     if fmt == 'json':
@@ -71,6 +91,12 @@ async def   export_market_data(
             headers={"Content-Disposition": f'attachment; filename="{symbol}.xml'}
 <<<<<<< HEAD
 <<<<<<< HEAD
+=======
+        )
+=======
+<<<<<<< HEAD
+>>>>>>> feature/ingestion-test
+<<<<<<< HEAD
         )
 =======
     ...
@@ -81,3 +107,7 @@ async def   export_market_data(
 =======
         )
 >>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
+<<<<<<< HEAD
+=======
+>>>>>>> develop
+>>>>>>> feature/ingestion-test
