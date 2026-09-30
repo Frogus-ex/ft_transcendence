@@ -11,12 +11,14 @@ from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
 from utils import manager
 from routers import markets, websockets
+from export import exporter
 
 logging.basicConfig(
 	level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
+
 
 # Creating Redis pool
 @asynccontextmanager
@@ -101,3 +103,4 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
 
 app.include_router(markets.router)
 app.include_router(websockets.router)
+app.include_router(exporter.router)

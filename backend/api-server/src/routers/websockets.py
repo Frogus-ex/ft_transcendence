@@ -4,7 +4,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 router = APIRouter(prefix="/ws", tags=["WebSockets"])
+
 
 # WebSocket (Cache)
 @router.websocket("/markets/{symbol}")
