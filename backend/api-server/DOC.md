@@ -135,13 +135,26 @@ Here's what it should look like:
 
 ### Candle validation
 
-This section is reserved for validating the OHLC data once the data-science aggregation work is complete and the candle dataset is available for chart rendering.  
-
 The candle endpoint is used to return the OHLC time series for the charting UI. A typical test involves:
 
 - selecting a currency symbol;
-- choosing an interval such as `1m` or `5m`;
+- choosing an interval such as `1m` or `15m`;
 - setting a limit for the data points;
 - validating that the response contains the series required to render the chart correctly.
 
-This is the stage where the data scientist can verify the aggregation logic and confirm that the frontend can draw the market graph properly.
+Open the API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+Then call `GET /api/markets{symbol}/candles` to check the OHLC of the currency of your choice.
+
+Here's what it should look like:
+
+![alt text](images/image_candlesticks.png)
+
+Where in:
+- <u>*symbol*</u>, you write the currency available (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `XRPUSDT`, `ADAUSDT`).  
+- <u>*interval*</u>, you choose the interval difference between each OHLC data, default 1min (note that if you have just started the containers, you will need to wait *n* times based on the interval time you chose before the data is saved to the database and displayed).  
+- <u>*limit*</u>, you can choose how many OHLC data it displays, default 100.

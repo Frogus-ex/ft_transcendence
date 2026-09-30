@@ -22,7 +22,7 @@ services:
       - postgres_ingest_password
       - postgres_readonly_password
     volumes:
-      - ./backend/data-ingestion/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ./backend/data-ingestion/src/bootstrap/postgres/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
@@ -37,7 +37,8 @@ services:
     image: redis/redis-stack-server:7.2.0-v10
     container_name: transcendence_redis
     restart: unless-stopped
-    command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
+    init: true
+    command: sh -c 'export REDIS_ARGS="--requirepass $$(cat /run/secrets/redis_password)" && exec /entrypoint.sh'
     environment:
       REDIS_HOST: redis
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
@@ -64,6 +65,7 @@ services:
     env_file:
       - .env
     environment:
+      PYTHONPATH: /app
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 
@@ -85,16 +87,49 @@ services:
     networks:
       - transcendence_net
 
-  celery:
+  celery-worker:
     build:
       context: ./backend/data-ingestion
       dockerfile: Dockerfile
-    container_name: transcendence_celery
+    container_name: transcendence_celery_worker
     restart: unless-stopped
-    command: celery -A src.tasks worker --loglevel=WARNING
+    command: celery -A src.bootstrap.celery.tasks worker --loglevel=INFO
     env_file:
       - .env
     environment:
+      PYTHONPATH: /app
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - postgres_ingest_password
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
+  celery-beat:
+    build:
+      context: ./backend/data-ingestion
+      dockerfile: Dockerfile
+    container_name: transcendence_celery_beat
+    restart: unless-stopped
+    command: celery -A src.bootstrap.celery.tasks beat --loglevel=INFO
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 
@@ -122,6 +157,8 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_api_server
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     env_file:
       - .env
     environment:

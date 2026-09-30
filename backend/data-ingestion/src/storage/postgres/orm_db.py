@@ -1,19 +1,23 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from config import DB_URL
 import logging
+
+from sqlalchemy import MetaData, Table, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+from src.config import DB_URL
 
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
-# Creating the synchronous engine for the worker process
 engine = create_engine(
     DB_URL,
     echo=False,
     pool_size=10,
     max_overflow=20,
+    pool_pre_ping=True,
 )
 
-# Creating sync sessions
+metadata = MetaData()
+market_candles = Table("market_candles", metadata, autoload_with=engine)
+
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
@@ -21,8 +25,8 @@ SessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
-# Declarative base class for SQLAlchemy >=2.0
 Base = declarative_base()
+
 
 def get_session():
     """Yields a synchronous SQLAlchemy session."""

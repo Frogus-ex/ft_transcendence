@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import Index, Numeric, String, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
-from .orm_db import Base
+from src.storage.postgres import Base
 
 
 class MarketCandle(Base):
