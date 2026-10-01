@@ -83,7 +83,7 @@ def persist_all_closed_candles() -> None:
 
     try:
         with engine.begin() as conn:
-            res = conn.execute(query)
+            conn.execute(query)
     except Exception as exc:
         logger.error(f"Error while inserting OHLC data: {exc}")
 
