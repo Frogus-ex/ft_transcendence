@@ -156,5 +156,30 @@ Here's what it should look like:
 
 Where in:
 - <u>*symbol*</u>, you write the currency available (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `XRPUSDT`, `ADAUSDT`).  
-- <u>*interval*</u>, you choose the interval difference between each OHLC data, default 1min (note that if you have just started the containers, you will need to wait *n* times based on the interval time you chose before the data is saved to the database and displayed).  
+- <u>*interval*</u>, you choose the interval difference between each OHLC data, default 1min (note that if you have just started the containers, for example, you will need to wait until *xx:15/30/45* for 15m interval or *xx:00* for 1h interval and etc... before the data is saved to the database).  
 - <u>*limit*</u>, you can choose how many OHLC data it displays, default 100.
+
+### Export
+
+The API server also supports exporting market data for a single symbol in multiple formats. At the moment, `json`, `csv`, and `xml` are available for export.
+
+This can be done either from the frontend export button or directly through the FastAPI documentation. The following steps describe the API-based method.
+
+Open the API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+Then call `GET /export` and provide the parameters of your choice.
+Available arguments for each variable:  
+- symbol: `BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `XRPUSDT`, `ADAUSDT`
+- format: `json`, `csv`, `xml`
+- interval: `1m`, `15m`, `1h`, `4h`, `1d`, `1w`
+- limit: positive integer
+
+The response format depends on the selected export type: for `json`, the endpoint returns the data as a JSON string, while `csv` and `xml` responses are returned as downloadable files in the requested format.
+
+Here's what it should look like (with .xml):
+
+![alt text](images/image-export.png)

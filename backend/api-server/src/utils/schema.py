@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
-from datetime import datetime
+
 
 class CandleValidation(BaseModel):
     # For reading SQLAlchemy ORM
@@ -8,7 +8,7 @@ class CandleValidation(BaseModel):
 
     symbol: str
     interval: str
-    time: datetime
+    time: str
     open: Decimal
     high: Decimal
     low: Decimal

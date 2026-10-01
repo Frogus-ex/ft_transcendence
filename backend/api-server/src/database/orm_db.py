@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
 from config import DB_URL
 import logging
 
+
 logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 # Creating the async engine for the whole process

@@ -1,13 +1,14 @@
 import time
 from typing import List
 from fastapi import Depends, APIRouter
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import PositiveInt
 import redis.asyncio as aredis
 
-from database import MarketCandle, get_async_session
+from database import get_async_session
 from utils import CandleValidation, get_redis
 from config import DAY_MS, HOURS_MS, SYMBOLS
+from routers import fetch_candles
 
 
 router = APIRouter(prefix="/api/markets", tags=["Markets"])
@@ -59,22 +60,9 @@ async def   get_watchlist(r: aredis.Redis = Depends(get_redis)):
 async def   get_candles(
     symbol: str,
     interval: str = "1m",
-    limit: int = 100,
+    limit: PositiveInt = 100,
     session: AsyncSession = Depends(get_async_session)
 ):
     """Collect the last x ticks (default 100) from the table "market_candles" with a given interval (default 1-min)"""
 
-    query = (
-        select(MarketCandle)
-        .where(MarketCandle.symbol == symbol.upper(),
-               MarketCandle.interval == interval
-        )
-        .order_by(MarketCandle.time.desc())
-        .limit(limit)
-    )
-
-    # Getting tuple with result -> unpack it with .scalars() -> putting them in a list with .all()
-    result = await session.execute(query)
-    candles = result.scalars().all()
-    # Returning all the tables but backwards (from the oldest to the latest)
-    return candles[::-1]
+    return await fetch_candles(symbol, interval, limit, session)

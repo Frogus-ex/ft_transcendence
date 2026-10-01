@@ -1,122 +1,74 @@
-import asyncio
-import logging
-<<<<<<< HEAD
-import io
-import csv
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-import io
-import csv
-=======
-<<<<<<< HEAD
->>>>>>> feature/ingestion-test
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> develop
-import io
 import csv
 import io
-import csv
-import io
-import csv
-<<<<<<< HEAD
-=======
->>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
-<<<<<<< HEAD
-=======
->>>>>>> develop
->>>>>>> feature/ingestion-test
->>>>>>> develop
-from fastapi import APIRouter
-from fastapi.responses import Response
 import xml.etree.ElementTree as et
-from routers.markets import get_candles
+import logging
+
+from fastapi import APIRouter, Depends
+from fastapi.responses import Response
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import PositiveInt
+
+from routers import fetch_candles
+from database import get_async_session
+from utils import CandleValidation
+
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/export", tags=["Export"])
 
-router.get("")
-async def   export_market_data(
+
+@router.get("")
+async def export_market_data(
     symbol: str,
     format: str,
     interval: str = "1m",
-    limit: int = 100):
-    """Export the data in format file from symbol"""
+    limit: PositiveInt = 100,
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Export market data for a symbol in the requested format."""
 
-    data = await get_candles(symbol, interval, limit)
-
+    candles = await fetch_candles(symbol, interval, limit, session)
     fmt = format.lower()
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-<<<<<<< HEAD
->>>>>>> feature/ingestion-test
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
-=======
->>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
-<<<<<<< HEAD
-=======
->>>>>>> develop
->>>>>>> feature/ingestion-test
->>>>>>> develop
 
-    # FastAPI automatically converts into json type by default
-    if fmt == 'json':
-        return data
-    elif fmt == 'csv':
+    if fmt == "json":
+        return candles
+
+    rows = [c.model_dump() for c in candles]
+    fieldnames = list(CandleValidation.model_fields.keys())
+
+    if fmt == "csv":
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=["symbol", "timestamp", "price", "volume"])
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(data)
+        writer.writerows(rows)
 
         return Response(
             content=output.getvalue(),
             media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{symbol}.csv'}
+            headers={"Content-Disposition": f'attachment; filename="{symbol}.csv"'},
         )
-    elif fmt == 'xml':
+
+    if fmt == "xml":
         root = et.Element("market_data", symbol=symbol)
-        for row in data:
+        for row in rows:
             tick_element = et.SubElement(root, "tick")
             for key, value in row.items():
                 child = et.SubElement(tick_element, key)
                 child.text = str(value)
 
-        xml_str = et.tostring(root, encoding="utf-8", method='xml')
+        et.indent(root, space="  ", level=0)
+
+        xml_bytes = et.tostring(root, encoding="utf-8", method="xml", xml_declaration=True)
 
         return Response(
-            content=xml_str,
+            content=xml_bytes,
             media_type="application/xml",
-            headers={"Content-Disposition": f'attachment; filename="{symbol}.xml'}
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
+            headers={"Content-Disposition": f'attachment; filename="{symbol}.xml"'},
         )
-=======
-<<<<<<< HEAD
->>>>>>> feature/ingestion-test
-<<<<<<< HEAD
-        )
-=======
-    ...
->>>>>>> d391ed9 (feat: WIP, implementing data exports)
-=======
-        )
->>>>>>> 33ae139 (feat/docs: added data exporter with differents file type, need tests)
-=======
-        )
->>>>>>> bb93aba (feat/perf: WIP adding Redis Time Series for heavy calculations for OHLC aggragations)
-<<<<<<< HEAD
-=======
->>>>>>> develop
->>>>>>> feature/ingestion-test
->>>>>>> develop
+
+    return Response(
+        content="Unsupported export format",
+        media_type="text/plain",
+        status_code=400,
+    )

@@ -2,6 +2,7 @@ from typing import Any
 from fastapi import WebSocket, Request
 import redis.asyncio as aredis
 
+
 class ConnectionManager:
     """Manages WebSocket connections and broadcasts messages to all connected clients"""
 
@@ -25,6 +26,7 @@ class ConnectionManager:
                         await connection.send_text(str(message))
                 except Exception:
                     self.disconnect(connection)
+
 
 manager = ConnectionManager()
 
