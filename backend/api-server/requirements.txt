@@ -10,3 +10,6 @@ fastapi[standard]>=0.136.1
 
 # Pydantic
 pydantic>=2.6.0
+
+# Instrumentator(monitoring)
+prometheus-fastapi-instrumentator==7.0.0

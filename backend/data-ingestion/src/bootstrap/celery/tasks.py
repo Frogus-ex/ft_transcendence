@@ -34,7 +34,9 @@ app.conf.update(
     timezone="UTC",
     enable_utc=True,
     worker_prefetch_multiplier=1,
+    worker_send_task_events=True,
     task_acks_late=True,
+    task_ignore_result=True,
 )
 
 app.conf.beat_schedule = {
