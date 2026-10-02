@@ -3,3 +3,4 @@ secrets/*.txt
 !secrets/*.example
 secrets/*.json
 !secrets/*.example
+.make.log
