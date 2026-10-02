@@ -267,6 +267,21 @@ services:
     networks:
       - transcendence_net
 
+  celery-exporter:
+    image: docker.io/danihodovic/celery-exporter:latest
+    container_name: transcendence_celery_exporter
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command:
+      - 'CE_BROKER_URL="redis://:$$(cat /run/secrets/redis_password)@redis:6379/0" python /app/cli.py'
+    secrets:
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
   grafana:
     image: docker.io/grafana/grafana:11.4.0
     container_name: transcendence_grafana
