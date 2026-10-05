@@ -1,0 +1,106 @@
+{
+  "title": "Celery Monitoring - ft_transcendence",
+  "uid": "celery-ft-transcendence",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Workers actifs",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(celery_worker_up)", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Longueur de la queue",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(celery_queue_length)", "refId": "A" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Tâches réussies (total)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(celery_task_succeeded_total)", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Tâches échouées / rejetées (total)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(celery_task_rejected_total) + sum(celery_task_revoked_total)", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Débit des tâches par état (/sec)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(rate(celery_task_succeeded_total[1m]))", "legendFormat": "succeeded", "refId": "A" },
+        { "expr": "sum(rate(celery_task_received_total[1m]))", "legendFormat": "received", "refId": "B" },
+        { "expr": "sum(rate(celery_task_started_total[1m]))", "legendFormat": "started", "refId": "C" },
+        { "expr": "sum(rate(celery_task_rejected_total[1m]))", "legendFormat": "rejected", "refId": "D" },
+        { "expr": "sum(rate(celery_task_retried_total[1m]))", "legendFormat": "retried", "refId": "E" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Temps d'exécution moyen par tâche (sec)",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(celery_task_runtime_sum[5m])) by (name) / sum(rate(celery_task_runtime_count[5m])) by (name)",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Consommateurs actifs par queue",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "celery_active_consumer_count", "legendFormat": "{{queue_name}}", "refId": "A" }
+      ]
+    }
+  ]
+}

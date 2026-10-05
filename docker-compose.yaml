@@ -34,7 +34,7 @@ services:
       - transcendence_net
 
   redis:                                        
-    image: redis/redis-stack-server:7.2.0-v10
+    image: docker.io/redis/redis-stack-server:7.2.0-v10
     container_name: transcendence_redis
     restart: unless-stopped
     init: true
@@ -264,6 +264,21 @@ services:
     volumes:
       - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    networks:
+      - transcendence_net
+
+  celery-exporter:
+    image: docker.io/danihodovic/celery-exporter:latest
+    container_name: transcendence_celery_exporter
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command:
+      - 'CE_BROKER_URL="redis://:$$(cat /run/secrets/redis_password)@redis:6379/0" python /app/cli.py'
+    secrets:
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - transcendence_net
 

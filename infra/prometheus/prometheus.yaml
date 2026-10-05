@@ -14,7 +14,10 @@ scrape_configs:
     static_configs:
       - targets: ['redis-exporter:9121']
 
-  # À activer une fois que le backend expose /metrics (ex: via prometheus-fastapi-instrumentator)
-  # - job_name: 'backend'
-  #   static_configs:
-  #     - targets: ['backend:8000']
+  - job_name: 'celery-exporter'
+    static_configs:
+      - targets: ['celery-exporter:9808']
+
+  - job_name: 'fastAPI'
+    static_configs:
+      - targets: ['api-server:8000']

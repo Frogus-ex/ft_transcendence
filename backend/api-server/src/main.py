@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
+from utils.monitoring import setup_monitoring
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
@@ -90,6 +91,7 @@ async def   lifespan(app: FastAPI):
 
 app = FastAPI(title="Stock Market Data API", lifespan=lifespan)
 
+setup_monitoring(app)
 
 # FastAPI global exception handler for SQLAlchemy errors
 @app.exception_handler(SQLAlchemyError)
