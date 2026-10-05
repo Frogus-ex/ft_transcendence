@@ -37,6 +37,8 @@ app.conf.update(
     worker_send_task_events=True,
     task_acks_late=True,
     task_ignore_result=True,
+    worker_max_tasks_per_child=1000,
+    worker_max_memory_per_child=200_000,
 )
 
 app.conf.beat_schedule = {
