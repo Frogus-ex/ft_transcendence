@@ -93,7 +93,8 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_celery_worker
     restart: unless-stopped
-    command: celery -A src.bootstrap.celery.tasks worker --loglevel=INFO
+    init: true
+    command: celery -A src.bootstrap.celery.tasks worker --loglevel=INFO --concurrency=4
     env_file:
       - .env
     environment:
@@ -125,6 +126,7 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_celery_beat
     restart: unless-stopped
+    init: true
     command: celery -A src.bootstrap.celery.tasks beat --loglevel=INFO
     env_file:
       - .env

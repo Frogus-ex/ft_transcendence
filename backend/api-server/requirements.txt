@@ -6,7 +6,7 @@ asyncpg==0.31.0
 sqlalchemy[asyncio]>=2.0.0
 
 # Websocket server (FastAPI + Uvicorn)
-fastapi[standard]>=0.136.1
+fastapi[standard]<0.137.0
 
 # Pydantic
 pydantic>=2.6.0
