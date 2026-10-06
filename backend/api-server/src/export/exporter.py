@@ -30,15 +30,14 @@ async def export_market_data(
     """Export market data for a symbol in the requested format."""
 
     candles = await fetch_candles(symbol, interval, limit, session)
-    fmt = format.lower()
 
-    if fmt == "json":
+    if format == "json":
         return candles
 
     rows = [c.model_dump() for c in candles]
     fieldnames = list(CandleValidation.model_fields.keys())
 
-    if fmt == "csv":
+    if format == "csv":
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
@@ -50,7 +49,7 @@ async def export_market_data(
             headers={"Content-Disposition": f'attachment; filename="{symbol}.csv"'},
         )
 
-    if fmt == "xml":
+    if format == "xml":
         root = et.Element("market_data", symbol=symbol)
         for row in rows:
             tick_element = et.SubElement(root, "tick")

@@ -38,9 +38,10 @@ async def   lifespan(app: FastAPI):
             redis_url = f"redis://:{enc}@{REDIS_HOST}:{REDIS_PORT}/0"
         else:
             redis_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
-        app.state.redis_pool = aredis.ConnectionPool.from_url(
+        app.state.redis_pool = aredis.BlockingConnectionPool.from_url(
             redis_url,
             max_connections=20,
+            timeout=5,
             decode_responses=True,
             protocol=2
         )
