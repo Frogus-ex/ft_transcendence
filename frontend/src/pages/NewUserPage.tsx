@@ -75,11 +75,17 @@ const NewUserPage = () => {
 		// Try registering
 		try {
 			const response = await api.post(REGISTER_URL,
-				{ email, username: userName, pwd: password},
+				{ email, password, userName },
 				{
-					headers: { 'Content-Type': 'application/json' },
-					withCredentials: true
+					headers: { 'Content-Type': 'application/json' }
 				});
+			const { user } = response.data;
+			setAuth({
+				id: user.id,
+				username: user.username,
+				avatarUrl: user.avatarUrl,
+			});
+			navigate("/profile");
 		} catch (err) {
 			if (axios.isAxiosError(err)) {
 			if (!err.response) {
