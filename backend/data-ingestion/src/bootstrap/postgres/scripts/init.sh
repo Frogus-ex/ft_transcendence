@@ -17,6 +17,9 @@ fi
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_ADMIN_USER" --dbname "$POSTGRES_DB" <<-EOSQL
 
+    -- Addind query executing timeout to avoid blocking query
+    ALTER DATABASE transcendence_db SET statement_timeout = '5s';
+
     -- Initializing the table to store calculated data (candles)
     CREATE TABLE IF NOT EXISTS market_candles (
         id SERIAL PRIMARY KEY,

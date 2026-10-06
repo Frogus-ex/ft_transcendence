@@ -3,14 +3,13 @@ import io
 import xml.etree.ElementTree as et
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import PositiveInt
 
 from routers import fetch_candles
 from database import get_async_session
-from utils import CandleValidation
+from utils import CandleValidation, Format, Symbol, Interval, limiter
 
 
 logger = logging.getLogger(__name__)
@@ -19,11 +18,13 @@ router = APIRouter(prefix="/export", tags=["Export"])
 
 
 @router.get("")
+@limiter.limit("20/minute")
 async def export_market_data(
-    symbol: str,
-    format: str,
-    interval: str = "1m",
-    limit: PositiveInt = 100,
+    request: Request,
+    symbol: Symbol,
+    format: Format,
+    interval: Interval = "1m",
+    limit: int = Query(100, ge=1, le=1000),
     session: AsyncSession = Depends(get_async_session)
 ):
     """Export market data for a symbol in the requested format."""

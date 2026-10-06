@@ -6,13 +6,17 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from utils.monitoring import setup_monitoring
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
-from utils import manager
+from utils import manager, limiter
 from routers import markets, websockets
 from export import exporter
+
 
 logging.basicConfig(
 	level=logging.INFO,
@@ -88,8 +92,10 @@ async def   lifespan(app: FastAPI):
     await app.state.redis_client.aclose()
     await app.state.redis_pool.disconnect()
 
-
 app = FastAPI(title="Stock Market Data API", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 setup_monitoring(app)
 
