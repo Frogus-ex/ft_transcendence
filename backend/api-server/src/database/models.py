@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import Index, Numeric, String, DateTime, UniqueConstraint
+from sqlalchemy import Index, Numeric, String, DateTime, UniqueConstraint, Column, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 from .orm_db import Base
 
@@ -25,3 +25,12 @@ class MarketCandle(Base):
 
     def __repr__(self) -> str:
         return f"<Ticker {self.symbol} - Interval: {self.interval} at {self.time}>"
+
+class Users(Base):
+    __tablename__ = "user"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True)
+    email = Column(String, unique=True)
+    password_hash = Column(String, nullable=False)
+    avatar_url = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
