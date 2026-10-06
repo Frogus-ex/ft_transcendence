@@ -6,17 +6,20 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
+from utils.monitoring import setup_monitoring
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
 from utils import manager
 from routers import markets, websockets
+from export import exporter
 
 logging.basicConfig(
 	level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
+
 
 # Creating Redis pool
 @asynccontextmanager
@@ -40,15 +43,16 @@ async def   lifespan(app: FastAPI):
         logging.info("Redis connection pool created!")
 
         # Creating Redis client
-        redis_client = aredis.Redis(connection_pool=app.state.redis_pool)
+        app.state.redis_client = aredis.Redis(connection_pool=app.state.redis_pool)
         logging.info("Redis client created!")
     except Exception as e:
         logging.error(f"Failed to initialize Redis: {e}")
+        raise
 
     # Redis listening to ticks (Background Task)
     async def redis_listener():
         channel = "market_ticks_channel"
-        pubsub = redis_client.pubsub()
+        pubsub = app.state.redis_client.pubsub()
         await pubsub.subscribe(channel)
         logging.info("Subscribed to Redis channels!")
 
@@ -81,9 +85,13 @@ async def   lifespan(app: FastAPI):
     # Closing cleanly the server
     logging.info("Closing API server...")
     listener_task.cancel()
+    await app.state.redis_client.aclose()
     await app.state.redis_pool.disconnect()
 
+
 app = FastAPI(title="Stock Market Data API", lifespan=lifespan)
+
+setup_monitoring(app)
 
 # FastAPI global exception handler for SQLAlchemy errors
 @app.exception_handler(SQLAlchemyError)
@@ -94,5 +102,7 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
         content={"message": "Internal server error. Please try again later."},
     )
 
+
 app.include_router(markets.router)
 app.include_router(websockets.router)
+app.include_router(exporter.router)

@@ -21,10 +21,8 @@ services:
       - postgres_admin_password
       - postgres_ingest_password
       - postgres_readonly_password
-    ports:
-      - "${POSTGRES_PORT}:5432"
     volumes:
-      - ./backend/data-ingestion/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ./backend/data-ingestion/src/bootstrap/postgres/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
@@ -36,17 +34,16 @@ services:
       - transcendence_net
 
   redis:                                        
-    image: docker.io/library/redis:6-alpine
+    image: docker.io/redis/redis-stack-server:7.2.0-v10
     container_name: transcendence_redis
     restart: unless-stopped
-    command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
+    init: true
+    command: sh -c 'export REDIS_ARGS="--requirepass $$(cat /run/secrets/redis_password)" && exec /entrypoint.sh'
     environment:
       REDIS_HOST: redis
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
     secrets:
       - redis_password
-    ports:
-      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -68,6 +65,7 @@ services:
     env_file:
       - .env
     environment:
+      PYTHONPATH: /app
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 
@@ -89,16 +87,51 @@ services:
     networks:
       - transcendence_net
 
-  celery:
+  celery-worker:
     build:
       context: ./backend/data-ingestion
       dockerfile: Dockerfile
-    container_name: transcendence_celery
+    container_name: transcendence_celery_worker
     restart: unless-stopped
-    command: celery -A src.tasks worker --loglevel=WARNING
+    init: true
+    command: celery -A src.bootstrap.celery.tasks worker --loglevel=INFO --concurrency=4
     env_file:
       - .env
     environment:
+      PYTHONPATH: /app
+      POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
+      POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
+
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: postgres
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - postgres_ingest_password
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
+  celery-beat:
+    build:
+      context: ./backend/data-ingestion
+      dockerfile: Dockerfile
+    container_name: transcendence_celery_beat
+    restart: unless-stopped
+    init: true
+    command: celery -A src.bootstrap.celery.tasks beat --loglevel=INFO
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /app
       POSTGRES_INGEST_USER: ${POSTGRES_INGEST_USER}
       POSTGRES_INGEST_PASSWORD_FILE: /run/secrets/postgres_ingest_password
 
@@ -233,12 +266,21 @@ services:
     volumes:
       - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/prometheus/-/healthy || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+    networks:
+      - transcendence_net
+
+  celery-exporter:
+    image: docker.io/danihodovic/celery-exporter:latest
+    container_name: transcendence_celery_exporter
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command:
+      - 'CE_BROKER_URL="redis://:$$(cat /run/secrets/redis_password)@redis:6379/0" python /app/cli.py'
+    secrets:
+      - redis_password
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - transcendence_net
 
@@ -283,8 +325,6 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_frontend
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT}:5173"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173 || exit 1"]
       interval: 10s

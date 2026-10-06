@@ -1,5 +1,3 @@
-# To Update
-
 # Data Ingestion Backend
 
 The ingestion backend follows an EtLT pipeline (Extract, Transform-Light, Load, Transform-Heavy). It connects to the Binance WebSocket, extracts live market events, performs a lightweight validation and normalization step, stores the cleaned data in Redis and PostgreSQL, and then performs heavier transformations later to generate derived market data for the frontend.
@@ -15,7 +13,7 @@ The EtLT approach gives the best trade-off:
 - Extract: fetch live trade data from the Binance API.
 - Transform-Light: clean, validate, and normalize only the fields that matter (`symbol`, `price`, `quantity`, `timestamp`).
 - Load: persist the lightweight cleaned data into Redis and PostgreSQL for fast access and persistence.
-- Transform-Heavy: compute aggregates such as OHLC candles in a separate processing stage for analytics and visualization.
+- Transform-Heavy: compute aggregates such as OHLC candles directly in Redis Time Series, which performs the time-bucketing and aggregation natively for analytics and visualization.
 
 ### Pipeline comparison
 
@@ -50,201 +48,78 @@ The EtLT approach gives the best trade-off:
 
 ```text
 src/
-├── main.py
-├── config.py
-├── tasks.py
-├── calculations/
-│   └── operations.py
-├── scripts/
-│   └── init.sh
-├── services/
+├── bootstrap/
 │   ├── __init__.py
-│   ├── listener.py
-│   ├── parser.py
-│   └── dispatcher.py
-└── database/
-	├── __init__.py
-	├── redis_client.py
-	├── db_client.py
-	├── orm_db.py
-	└── models.py
+│   ├── main.py
+│   ├── celery/
+│   │   ├── __init__.py
+│   │   └── tasks.py
+│   ├── postgres/
+│   │   ├── __init__.py
+│   │   └── db_init.py
+│   └── redis/
+│       ├── __init__.py
+│       ├── redis_async_init.py
+│       └── redis_sync_init.py
+├── config/
+│   ├── __init__.py
+│   └── env.py
+├── domain/
+│   └── market/
+│       ├── __init__.py
+│       ├── models.py
+│       ├── symbols.py
+│       └── timeframes.py
+├── ingestion/
+│   ├── __init__.py
+│   ├── pipelines/
+│   │   ├── __init__.py
+│   │   └── parser.py
+│   ├── tasks/
+│   │   ├── __init__.py
+│   │   └── dispatcher.py
+│   └── websockets/
+│       ├── __init__.py
+│       └── listener.py
+└── storage/
+    ├── __init__.py
+    ├── postgres/
+    │   ├── __init__.py
+    │   └── orm_db.py
+    └── redis/
+        ├── __init__.py
+        ├── tick_store.py
+        └── candle_store.py
 ```
-
-The files are grouped by responsibility:
-
-- `main.py`: creates the list of Binance streams and starts one task per symbol using an `asyncio.TaskGroup`.
-- `config.py`: loads application settings and secrets.
-- `tasks.py`: Celery bootstrap and task registration entry point; it does not perform the heavy price calculations itself.
-- `calculations/operations.py`: dedicated module for heavy background aggregation calculations.
-- `scripts/init.sh`: initializes the PostgreSQL schema and application users.
-- `services/`: contains the stream listener, data parsing, and dispatch logic.
-- `database/`: provides Redis access, PostgreSQL access, and SQLAlchemy definitions.
-- `__init__.py`: marks directories as Python packages and can expose selected public functions.
 
 ## Data Flow
 
-1. `main.py` defines the list of five Binance streams (`BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `XRPUSDT`, `ADAUSDT`) and creates one task per stream inside an `asyncio.TaskGroup`.
-2. `listener.py` connects to each stream and keeps the WebSocket alive, reconnecting automatically if the connection drops.
-3. `parser.py` performs a light transformation by validating and normalizing the raw JSON payload into a minimal, useful structure.
-4. `dispatcher.py` writes the latest value to Redis and periodically writes filtered price updates to PostgreSQL.
-5. `redis_client.py` stores the current ticker as JSON in Redis for low-latency access.
-6. `db_client.py` persists the cleaned tick-level records through the SQLAlchemy ORM.
-7. `tasks.py` only initializes the Celery app and registers the workload entry points; the actual heavy transformation logic is intentionally delegated to `calculations/operations.py`.
+The ingestion architecture is built around a simple, scalable pipeline:
 
-## Application Files
+1. The application starts one Binance WebSocket listener per symbol using an `asyncio.TaskGroup` in `bootstrap/main.py`.
+2. Each listener connects to its stream, receives trade events in real time, and reconnects automatically if the socket drops.
+3. The raw payload is normalized in `ingestion/pipelines/parser.py` to retain only the fields required by the platform.
+4. The cleaned data is queued through Celery tasks and dispatched to Redis for low-latency access and publication.
+5. Redis Time Series stores the live tick stream and the interval-based aggregate series, while the frontend reads the latest value and the derived candle buckets.
+6. Closed candle windows are periodically flushed into PostgreSQL for longer-term storage and historical queries.
 
-### `main.py`
+This keeps the real-time ingestion path fast while moving heavy aggregation to the storage layer where Redis Time Series can do the bucketing natively.
 
-This is the application entry point. Instead of managing one websocket only, it defines a list of all active Binance streams and starts a dedicated task for each one:
+## Project Architecture
 
-```python
-streams = [
-    {"url": "wss://stream.binance.com:9443/ws/btcusdt@trade", "symbol": "BTCUSDT"},
-    {"url": "wss://stream.binance.com:9443/ws/ethusdt@trade", "symbol": "ETHUSDT"},
-    {"url": "wss://stream.binance.com:9443/ws/solusdt@trade", "symbol": "SOLUSDT"},
-    {"url": "wss://stream.binance.com:9443/ws/xrpusdt@trade", "symbol": "XRPUSDT"},
-    {"url": "wss://stream.binance.com:9443/ws/adausdt@trade", "symbol": "ADAUSDT"},
-]
-```
+The refactored project is organized by responsibility, with clear separation between startup, ingestion, and storage concerns:
 
-The server initializes the ingestion flow and starts all listeners through `asyncio.TaskGroup()`, which makes the ingestion process concurrent and resilient. Each task calls `listen_stream(url, symbol)` so the app can handle multiple cryptocurrencies in parallel without blocking on a single connection.
+- `bootstrap/main.py` initializes the Redis Time Series backing store and starts one listener per configured symbol.
+- `ingestion/websockets/listener.py` maintains each Binance WebSocket connection and keeps the stream alive with reconnect logic.
+- `ingestion/pipelines/parser.py` converts the raw Binance event into a compact, validated payload.
+- `ingestion/tasks/dispatcher.py` queues the cleaned data for async processing.
+- `storage/redis/tick_store.py` writes the latest cache entry, stores tick and volume points in Redis Time Series, and publishes live updates to the market channel.
+- `storage/redis/candle_store.py` computes the latest closed OHLC buckets and persists them to PostgreSQL.
+- `bootstrap/celery/tasks.py` configures the Celery app, beat schedule, and task registration for the ingestion pipeline.
+- `storage/postgres/orm_db.py` defines the SQLAlchemy connection layer used by the candle persistence path.
+- `bootstrap/redis/*.py` handles the Redis client setup and Time Series initialization used across the service.
 
-The application still initializes the PostgreSQL connection pool and later closes it on shutdown. The main difference from the earlier single-stream design is that the network handling is delegated to dedicated listener tasks.
-
-### `services/listener.py`
-
-This module contains the active listener logic that was extracted from `main.py`. Each `listen_stream(url, symbol)` task opens a Binance WebSocket connection for one symbol, reads incoming trade messages, and sends the cleaned payload to the processing layer.
-
-The listener runs in a loop:
-
-- connect to the given Binance stream;
-- receive messages continuously;
-- validate and normalize each message with `parse_raw_data()`;
-- dispatch the processed payload with `process_and_dispatch.delay(cleaned_data)`;
-- if the connection closes or an error occurs, log the problem and reconnect after a short delay.
-
-This keeps ingestion resilient across one or many streams and allows the rest of the application to stay focused on parsing, validation, and data loading.
-
-### `config.py`
-
-This module centralizes configuration for PostgreSQL and Redis. Values are read from environment variables, which allows the same code to run locally or inside Docker without hard-coded credentials.
-
-For passwords, the module first tries to read the path provided by a Docker secret variable such as `POSTGRES_INGEST_PASSWORD_FILE` or `REDIS_PASSWORD_FILE`. If the file cannot be used, it falls back to the corresponding password environment variable.
-
-It also builds `DB_URL`, the SQLAlchemy connection URL used by the ORM. A warning is logged when required PostgreSQL settings are missing.
-
-### `services/parser.py`
-
-`parse_raw_data()` converts a raw JSON message from Binance into a normalized Python dictionary containing:
-
-- `symbol`: the trading pair, such as `BTCUSDT`.
-- `price`: the trade price as a `float`.
-- `quantity`: the traded quantity as a `float`.
-- `timestamp`: the trade time as a UTC-aware `datetime`.
-
-If the message is invalid or a required field is missing, the function returns `None`. The caller can then ignore the invalid message without stopping the ingestion loop.
-
-### `services/dispatcher.py`
-
-`process_and_dispatch()` sends every valid record to Redis so the cache always contains the most recent ticker.
-
-To limit PostgreSQL writes, it stores a record only when both conditions are met:
-
-- at least one second has passed since the previous database write;
-- the price is different from the last stored price.
-
-This keeps the real-time cache current while reducing duplicate database records and unnecessary database traffic.
-
-### `tasks.py`
-
-`tasks.py` is the Celery entry point and configuration layer. Its responsibility is to initialize the Celery application, define the task registry, and expose the worker bootstrap needed to process background workloads. It does not perform the heavy market calculations itself; those calculations are expected to live in `calculations/operations.py`.
-
-The heavy transformation step is intentionally kept separate so that ingestion remains fast and the aggregation logic can evolve independently without blocking the live stream listener.
-
-### `calculations/operations.py`
-
-This module is reserved for the heavy background calculations used to derive market summaries such as OHLC candles and other time-based aggregations. For now, it is intentionally empty and acts as the dedicated place where the data scientist will later implement the aggregation logic across different time scales (for example: 1s, 1m, 5m, 1h).
-
-### `database/redis_client.py`
-
-This module creates a Redis connection pool using the configuration loaded by `config.py`.
-
-`save_to_cache_and_publish()` stores each ticker under a key such as `ticker:BTCUSDT`. The record is serialized as JSON before it is written. Because Python's `datetime` objects are not JSON serializable by default, `date_time_encoder()` converts timestamps to ISO 8601 strings.
-
-Redis connection errors are ignored so a temporary cache failure does not stop the ingestion pipeline. Other Redis errors are logged.
-
-### `database/db_client.py`
-
-This module manages the PostgreSQL connection pool and persists ticker data.
-
-`init_db_pool()` creates a psycopg (psycopg3) connection pool with a maximum of 10 connections. Reusing pooled connections avoids opening and closing a new database connection for every operation; SQLAlchemy's engine and session are used for ORM writes.
-
-`save_to_db()` creates a `Ticker` ORM object from the cleaned dictionary, adds it to a synchronous SQLAlchemy session, and commits the transaction. If the write fails, the session is rolled back and the error is logged.
-
-`close_db_pool()` closes the psycopg pool cleanly when the application shuts down.
-
-The aggregation logic that will eventually be implemented in `calculations/operations.py` will use the same database persistence patterns as the rest of the ingestion pipeline. Review `db_client.py` for transaction and session conventions before adding heavy calculation jobs.
-
-### `database/orm_db.py`
-
-This module contains the shared SQLAlchemy setup:
-
-- `engine` creates the synchronous connection engine using `DB_URL`;
-- `SessionLocal` creates synchronous database sessions;
-- `Base` is the declarative base class used by ORM models;
-- `get_session()` provides a session and closes it automatically when the operation finishes.
-
-The engine is configured with a pool size of 10 and can temporarily create up to 20 additional connections through `max_overflow`.
-
-### `database/models.py`
-
-This module defines the database schema used by SQLAlchemy. The `Ticker` class maps to the `market_ticks` PostgreSQL table.
-
-Each ticker record contains an auto-incrementing identifier, symbol, price, quantity, trade timestamp, and automatically generated creation timestamp. Prices and quantities use `Numeric(18, 8)` to preserve decimal precision.
-
-The `idx_ticks_symbol_timestamp` index improves queries that filter by symbol and sort by the most recent timestamp.
-
-`tasks.py` relies on the `Ticker` schema for both raw ticks and aggregated records. See `models.py` to understand column types (for example `Numeric(18, 8)`) and existing indexes before designing new aggregate tables or altering existing ones.
-
-### `scripts/init.sh`
-
-This shell script initializes PostgreSQL when the database container is created for the first time. Docker Compose mounts it at PostgreSQL's `/docker-entrypoint-initdb.d/init.sh` path, so the official PostgreSQL image executes it automatically during the initial database setup.
-
-The script starts with `set -e`, which stops execution if a command fails. It uses `psql` with `ON_ERROR_STOP=1` so SQL errors also stop the initialization instead of allowing the database to continue in a partially configured state.
-
-Before executing the SQL, the script loads the ingestion and read-only passwords. It prefers the Docker secret files specified by `POSTGRES_INGEST_PASSWORD_FILE` and `POSTGRES_READONLY_PASSWORD_FILE`, then falls back to `POSTGRES_INGEST_PASSWORD` and `POSTGRES_READONLY_PASSWORD` if the files are unavailable.
-
-The SQL block performs the following operations:
-
-- creates the `market_ticks` and `market_candles` tables if it does not already exist;
-- creates the `idx_ticks_symbol_timestamp` and `idx_candles_symbol_time` indexes for queries by symbol and descending timestamp;
-- creates the ingestion user if necessary, or updates its password if it already exists;
-- grants the ingestion user permission to connect, use the public schema, and select or insert table data;
-- grants the ingestion user sequence permissions required for auto-incrementing IDs;
-- creates the read-only user if necessary, or updates its password if it already exists;
-- grants the read-only user permission to connect, use the public schema, and select table data.
-
-The `CREATE ... IF NOT EXISTS` statements make the schema setup repeatable. The user-management blocks use PostgreSQL's `DO` syntax to check whether each role exists before creating or updating it.
-
-Because this script is part of PostgreSQL's first-start initialization process, changing it does not automatically update an existing database volume. After modifying the script, apply the changes with an appropriate migration or recreate the database volume only when existing data may safely be removed.
-
-### `__init__.py`
-
-Both `services/` and `database/` contain an `__init__.py` file. These files make the directories importable as Python packages.
-
-They also re-export selected functions. For example, `services/__init__.py` allows:
-
-```python
-from services import parse_raw_data
-```
-
-instead of:
-
-```python
-from services.parser import parse_raw_data
-```
-
-The current `main.py` imports from the individual modules, so the re-exports are optional. An empty `__init__.py` is also valid when no package-level public API is needed.
+This keeps the live stream lightweight and predictable, while leaving the interval-based candle generation to Redis Time Series and the periodic Celery workers that flush completed buckets into PostgreSQL.
 
 ## PostgreSQL
 
@@ -255,8 +130,8 @@ The project provides separate PostgreSQL users for different responsibilities:
 | User | Role | Purpose | Typical privileges |
 | --- | --- | --- | --- |
 | `transcendence_user` | Administrator | Initializes or changes the database schema | All privileges |
-| `ingest_user` | Ingestion | Writes data from the pipeline | `INSERT`, `SELECT` |
-| `reader_user` | Read-only | Reads data and performs aggregate queries | `SELECT` |
+| `ingest_user` | Ingestion | Writes data from the pipeline | `INSERT`, `SELECT`, `UPDATE` |
+| `reader_user` | Read-only | Reads data | `SELECT` |
 
 Do not use `transcendence_user` for normal application work. Use `reader_user` for investigations and queries, and reserve `ingest_user` for ingestion operations.
 
@@ -285,7 +160,17 @@ AUTH REDIS_PASSWORD
 The latest cached ticker can be read with:
 
 ```text
-GET ticker:BTCUSDT
+TS.GET ts:{symbol}:ticks
+It will return (timestamp, value) where timestamp is in millisecond since epoch (01/01/1970 00:00) and value in US Dollars.
+
+GET cache:{symbol}:latest
+It will return the full JSON of the latest cached price.
+```
+
+If you want the full detail OHLC of each timeframe (1m, 15m, 1h, 4h, 1d, 1w) of one currency:
+
+```text
+TS.INFO ts:{symbol}:ticks
 ```
 
 If `MONITOR` is interrupted with `Ctrl+C`, authenticate again before running another command.

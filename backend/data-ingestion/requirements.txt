@@ -4,7 +4,7 @@
 websockets==17.0.1
 
 # Database (Redis & PostgreSQL)
-redis==6.4.0
+redis>=5.0.1
 psycopg[binary, pool]
 
 # ORM for database (SQLAlchemy)

@@ -4,7 +4,7 @@ FROM python:3.12-alpine
 # and to ensure output is sent straight to the terminal without buffering (lighter container).
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/src
+    PYTHONPATH=/app
 
 WORKDIR /app
 
@@ -24,4 +24,4 @@ USER appuser
 
 COPY --chown=appuser:appuser . .
 
-CMD ["python", "-m", "src.main"]
+CMD ["python", "-m", "src.bootstrap.main"]
