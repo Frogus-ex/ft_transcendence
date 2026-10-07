@@ -8,6 +8,9 @@ sqlalchemy[asyncio]>=2.0.0
 # Websocket server (FastAPI + Uvicorn)
 fastapi[standard]<0.137.0
 
+# Rate limiting (SlowAPI)
+slowapi==0.1.10
+
 # Pydantic
 pydantic>=2.6.0
 

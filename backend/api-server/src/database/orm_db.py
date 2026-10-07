@@ -15,8 +15,8 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 engine = create_async_engine(
     DB_URL,
     echo=False,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5,
+    max_overflow=5,
     pool_pre_ping=True,
 )
 
