@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import Index, Numeric, String, DateTime, UniqueConstraint, Column, Integer, func
+from sqlalchemy import Index, Numeric, String, DateTime, UniqueConstraint, Column, Integer, func, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from .orm_db import Base
 
@@ -27,10 +27,19 @@ class MarketCandle(Base):
         return f"<Ticker {self.symbol} - Interval: {self.interval} at {self.time}>"
 
 class Users(Base):
-    __tablename__ = "user"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True)
-    email = Column(String, unique=True)
-    password_hash = Column(String, nullable=False)
-    avatar_url = Column(String)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+	__tablename__ = "users"
+    
+	id: Mapped[int] = mapped_column(primary_key=True)
+	username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+	password_hash: Mapped[str] = mapped_column(String, nullable=False)
+	avatar_url: Mapped[str] = mapped_column(String)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+class Wallet(Base):
+	__tablename__ = "wallets"
+
+	id: Mapped[int] = mapped_column(primary_key=True)
+	user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+	cash_balance: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, default=0)
+    
