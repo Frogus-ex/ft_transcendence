@@ -75,12 +75,12 @@ function ProfilePage() {
 				// Get the data from PostgreSQL database
 				// Promise is used to handle asynchronous operations
 				// Promise.all() only fulfills when every promise has been fulfilled correctly, and rejects all when one rejects
-				const [userRes, portfolioRes] = await Promise.all ([
+				const [userRes] = await Promise.all ([
 					api.get<UserMe>("/api/users/me", config),
-					api.get<Portfolio>("/api/portfolio", config),
+					// api.get<Portfolio>("/api/portfolio", config),
 				]);
 				setUser(userRes.data);
-				setPortfolio(portfolioRes.data)
+				// setPortfolio(portfolioRes.data)
 			} catch (error) {
 				if (controller.signal.aborted) return;
 				if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -109,9 +109,9 @@ function ProfilePage() {
 			size="large"
 			/>
 			<div>
-			<p className="text-white font-semibold text-lg">Tom Lorette</p>
+			<p className="text-white font-semibold text-lg">{user.username}</p>
 			<Tooltip text="Online">
-				<Badge variant="online" size="medium" />
+				<Badge variant="online" size="medium" />Tom Lorette
 			</Tooltip>
 			</div>
 		</div>

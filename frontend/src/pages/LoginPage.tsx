@@ -52,7 +52,7 @@ function LoginPage() {
 			} else if (err.response.status === 401) {
 			setErrMsg("Incorrect email or password");
 			} else {
-			setErrMsg("Registration Failed");
+			setErrMsg("Login Failed");
 			}
 			errRef.current?.focus();
 			}

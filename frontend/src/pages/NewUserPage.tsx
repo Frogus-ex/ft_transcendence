@@ -32,7 +32,7 @@ const NewUserPage = () => {
 	const [validMatchPwd, setValidMatchPwd] = useState(false);
 	const [matchPwdFocus, setMatchPwdFocus] = useState(false);
 
-	const [userName, setUserName] = useState("");
+	const [username, setUsername] = useState("");
 	const [validUser, setValidUser] = useState(false);
 	const [userFocus, setUserFocus] = useState(false);
 
@@ -51,8 +51,8 @@ const NewUserPage = () => {
     }, [email])
 
 	useEffect(() => {
-        setValidUser(USER_REGEX.test(userName));
-    }, [userName])
+        setValidUser(USER_REGEX.test(username));
+    }, [username])
 
 	useEffect(() => {
         setValidPwd(PWD_REGEX.test(password));
@@ -67,7 +67,7 @@ const NewUserPage = () => {
 		event.preventDefault();
 		const v1 = EMAIL_REGEX.test(email);
 		const v2 = PWD_REGEX.test(password);
-		const v3 = USER_REGEX.test(userName);
+		const v3 = USER_REGEX.test(username);
 		if (!v1 || !v2 || !v3) {
 			setErrMsg( "Invalid Entry");
 			return;
@@ -75,17 +75,10 @@ const NewUserPage = () => {
 		// Try registering
 		try {
 			const response = await api.post(REGISTER_URL,
-				{ email, password, userName },
+				{ email, password, username },
 				{
 					headers: { 'Content-Type': 'application/json' }
 				});
-			const { user } = response.data;
-			setAuth({
-				id: user.id,
-				username: user.username,
-				avatarUrl: user.avatarUrl,
-			});
-			navigate("/profile");
 		} catch (err) {
 			if (axios.isAxiosError(err)) {
 			if (!err.response) {
@@ -97,6 +90,7 @@ const NewUserPage = () => {
 			}
 			errRef.current?.focus();
 			}
+			return
 		}
 		// Try logging in
 		try {
@@ -137,9 +131,9 @@ const NewUserPage = () => {
 				<div className="flex flex-col gap-1 items-center">
 					<Label htmlFor="userName">User Name :</Label>
 					<Input
-						value={userName}
+						value={username}
 						id="userName"
-						onChange={(event) => setUserName(event.target.value)}
+						onChange={(event) => setUsername(event.target.value)}
 						type="text"
 						size="medium"
 						placeholder="username"
@@ -148,7 +142,7 @@ const NewUserPage = () => {
 						onFocus={() => setUserFocus(true)}
 						onBlur={() => setUserFocus(false)}
 					/>
-					<p id="uidnote" className={userFocus && userName && !validUser ? "instructions" : "offscreen"}>
+					<p id="uidnote" className={userFocus && username && !validUser ? "instructions" : "offscreen"}>
                             Username must be at least three characters long<br />
                     </p>
 				</div>
