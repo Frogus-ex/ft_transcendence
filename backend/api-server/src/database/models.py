@@ -36,10 +36,10 @@ class Users(Base):
 	avatar_url: Mapped[str] = mapped_column(String)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
-class Wallet(Base):
-	__tablename__ = "wallets"
+class Portfolio(Base):
+	__tablename__ = "portfolio"
 
 	id: Mapped[int] = mapped_column(primary_key=True)
 	user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
 	cash_balance: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, default=0)
-    
+	positions: Mapped[dict] = mapped_column(String, nullable=False, default="{}")

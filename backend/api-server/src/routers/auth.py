@@ -1,7 +1,10 @@
+import json
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
 from datetime import timedelta, datetime, timezone
 from jose import jwt, JWTError
 from typing import Annotated
@@ -11,7 +14,7 @@ from starlette import status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import Users, Wallet
+from database.models import Users, Portfolio
 from database.orm_db import get_async_session
 from config import JWT_SECRET
 
@@ -49,6 +52,30 @@ class LoginResponse(BaseModel):
 	token: str
 	user: UserOut
 
+class PortfolioOut(BaseModel):
+	model_config = ConfigDict(from_attributes=True)
+	id: int
+	user_id: int
+	balance: Decimal = Field(validation_alias="cash_balance")
+	positions: list[dict] = Field(default_factory=list)
+
+	@field_validator("positions", mode="before")
+	@classmethod
+	def parse_positions(cls, value):
+		if value is None:
+			return []
+		if isinstance(value, str):
+			try:
+				parsed = json.loads(value)
+			except (TypeError, ValueError):
+				return []
+			if isinstance(parsed, list):
+				return parsed
+			if isinstance(parsed, dict):
+				return [parsed]
+			return []
+		return value
+
 db_dependency = Annotated[AsyncSession, Depends(get_async_session)]
 
 
@@ -66,7 +93,7 @@ async def register(db: db_dependency,
 	db.add(user)
 	try:
 		await db.flush()
-		db.add(Wallet(user_id=user.id))
+		db.add(Portfolio(user_id=user.id))
 		await db.commit()
 	except IntegrityError:
 		await db.rollback()
@@ -110,3 +137,18 @@ async def profile(credentials: Annotated[HTTPAuthorizationCredentials, Depends(b
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
 	return user
+
+
+@router.get("/portfolio", response_model=PortfolioOut)
+async def get_portfolio(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)], db: db_dependency):
+	try:
+		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
+		user_id=int(payload["sub"])
+	except (JWTError, KeyError, ValueError):
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
+	
+	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
+	portfolio = result.scalar_one_or_none()
+	if portfolio is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found.")
+	return portfolio
