@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { priceColors } from "../styles/tokens";
 import { useMarket } from "../context/MarketContext";
 
 /**
