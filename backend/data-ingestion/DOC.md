@@ -167,7 +167,7 @@ GET cache:{symbol}:latest
 It will return the full JSON of the latest cached price.
 ```
 
-If you want the full detail OHLC of each timeframe (1m, 15m, 1h, 4h, 1d, 1w) of one currency:
+If you want the full detail OHLC of each timeframe (1m, 5m, 1h, 1d, 1w) of one currency:
 
 ```text
 TS.INFO ts:{symbol}:ticks
