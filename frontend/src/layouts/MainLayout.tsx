@@ -3,6 +3,8 @@ import Modal from "../components/Modal";
 import Button from "../components/Button";
 import ChatWidget from "../components/ChatWidget";
 import { Outlet, Link } from "react-router";
+import { useAuth } from "../hooks/useAuth";
+import Avatar from "../components/Avatar";
 import {
   BadgeDollarSign,
   Menu,
@@ -21,9 +23,10 @@ import {
 } from "../styles/tokens";
 
 function MainLayout() {
+  const { auth, setAuth } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const isLoggedIn = Boolean(auth.accessToken);
 
   if (!isLoggedIn) {
     return (
@@ -54,7 +57,7 @@ function MainLayout() {
           </Link>
         </nav>
         <div className="flex-1 flex flex-col">
-          <Outlet context={{ isLoggedIn, setIsLoggedIn }} />
+          <Outlet context={{ isLoggedIn }} />
         </div>
       </div>
     );
@@ -93,14 +96,14 @@ function MainLayout() {
             className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-800"
           >
             <Home size={20} />
-            {isSidebarOpen && <span>Accueil</span>}
+            {isSidebarOpen && <span>Home</span>}
           </Link>
           <Link
             to="/profile"
             className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-800"
           >
             <BriefcaseBusiness size={20} />
-            {isSidebarOpen && <span>profile</span>}
+            {isSidebarOpen && <span>Profile</span>}
           </Link>
           <Link
             to="/markets"
@@ -126,24 +129,49 @@ function MainLayout() {
         </nav>
       </aside>
       <div className="flex-1 flex flex-col min-h-screen">
-        <Outlet context={{ isLoggedIn, setIsLoggedIn }} />
+        <header
+          className={
+            surfaceBackground +
+            " " +
+            borderColor +
+            " border-b flex justify-end px-6 py-4"
+          }
+        >
+          <Link
+            to="/profile"
+            aria-label={`View ${auth.username ?? "your"} profile`}
+            className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold hover:bg-gray-800"
+          >
+            {auth.avatarUrl ? (
+              <Avatar
+                src={auth.avatarUrl}
+                alt=""
+                size="small"
+              />
+            ) : (
+              <CircleUser size={24} aria-hidden="true" />
+            )}
+            <span>{auth.username ?? "Profile"}</span>
+          </Link>
+        </header>
+        <Outlet context={{ isLoggedIn }} />
       </div>
       <Modal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
       >
-        <p className="mb-4">Voulez-vous vous déconnecter ?</p>
+        <p className="mb-4">Log Out?</p>
         <div className="flex gap-3 justify-center">
           <Button
             variant="primary"
             size="medium"
             type="button"
             onClick={() => {
-              setIsLoggedIn(false);
+              setAuth({});
               setIsLogoutModalOpen(false);
             }}
           >
-            Oui
+            Yes
           </Button>
           <Button
             variant="secondary"
@@ -151,7 +179,7 @@ function MainLayout() {
             type="button"
             onClick={() => setIsLogoutModalOpen(false)}
           >
-            Non
+            No
           </Button>
         </div>
       </Modal>

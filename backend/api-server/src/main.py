@@ -18,7 +18,7 @@ from urllib.parse import quote_plus
 from routers import markets, websockets, auth
 from utils import manager, limiter
 from export import exporter
-from database.models import Users, Wallet
+from database.models import Users, Portfolio
 from database.orm_db import engine, Base
 
 
@@ -36,7 +36,7 @@ async def   lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(
             Base.metadata.create_all,
-            tables=[cast(Table, Users.__table__), cast(Table, Wallet.__table__)],
+            tables=[cast(Table, Users.__table__), cast(Table, Portfolio.__table__)],
 		)
     """Creating a connection pool and a client for Redis before starting FastAPI"""
 

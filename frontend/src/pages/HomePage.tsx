@@ -12,7 +12,6 @@ import { Link, useNavigate, useOutletContext } from "react-router";
 
 type OutletContextType = {
   isLoggedIn: boolean;
-  setIsLoggedIn: (value: boolean) => void;
 };
 
 function HomePage() {
