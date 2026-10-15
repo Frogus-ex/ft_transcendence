@@ -138,7 +138,7 @@ function OrderTicket() {
 
       {/* Zone 4 — Quantité */}
       <div className="flex flex-col gap-1">
-        <Label htmlFor="qty">Quantité (BTC)</Label>
+        <Label htmlFor="qty">Quantité ({selectedSymbol})</Label>
         <Input
           id="qty"
           type="number"
@@ -206,7 +206,7 @@ function OrderTicket() {
         shape="square"
         onClick={handleSubmit}
       >
-        {form.side === "buy" ? "Buy BTC" : "Sell BTC"}
+        {form.side === "buy" ? `Buy ${selectedSymbol}` : `Sell ${selectedSymbol}`}
       </Button>
     </div>
   );
