@@ -10,12 +10,16 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from utils.monitoring import setup_monitoring
+from typing import cast
+from sqlalchemy import Table
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
+from routers import markets, websockets, auth
 from utils import manager, limiter
-from routers import markets, websockets
 from export import exporter
+from database.models import Users, Wallet
+from database.orm_db import engine, Base
 
 
 logging.basicConfig(
@@ -28,6 +32,12 @@ logging.basicConfig(
 # Creating Redis pool
 @asynccontextmanager
 async def   lifespan(app: FastAPI):
+    logging.info("Creating user tables if missing...")
+    async with engine.begin() as conn:
+        await conn.run_sync(
+            Base.metadata.create_all,
+            tables=[cast(Table, Users.__table__), cast(Table, Wallet.__table__)],
+		)
     """Creating a connection pool and a client for Redis before starting FastAPI"""
 
     # Creating a connection pool for/from Redis (max 20 connections, editable)
@@ -113,3 +123,4 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
 app.include_router(markets.router)
 app.include_router(websockets.router)
 app.include_router(exporter.router)
+app.include_router(auth.router)

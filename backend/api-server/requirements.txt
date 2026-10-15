@@ -16,3 +16,8 @@ pydantic>=2.6.0
 
 # Instrumentator(monitoring)
 prometheus-fastapi-instrumentator==7.0.0
+
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt<4.1
+email-validator

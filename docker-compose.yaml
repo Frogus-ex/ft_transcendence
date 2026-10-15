@@ -16,12 +16,16 @@ services:
       POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER}
       POSTGRES_READONLY_PASSWORD_FILE: /run/secrets/postgres_readonly_password
 
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER}
+      POSTGRES_APP_PASSWORD_FILE: /run/secrets/postgres_app_password
+
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: postgres
     secrets:
       - postgres_admin_password
       - postgres_ingest_password
       - postgres_readonly_password
+      - postgres_app_password
     volumes:
       - ./backend/data-ingestion/src/bootstrap/postgres/scripts/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
       - postgres_data:/var/lib/postgresql/data
@@ -167,6 +171,9 @@ services:
     environment:
       POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER}
       POSTGRES_READONLY_PASSWORD_FILE: /run/secrets/postgres_readonly_password
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER}
+      POSTGRES_APP_PASSWORD_FILE: /run/secrets/postgres_app_password
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
 
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PORT: ${POSTGRES_PORT}
@@ -177,7 +184,9 @@ services:
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
     secrets:
       - postgres_readonly_password
+      - postgres_app_password
       - redis_password
+      - jwt_secret
     depends_on:
       redis:
         condition: service_healthy
@@ -350,6 +359,8 @@ secrets:
     file: ./secrets/jwt_secret.txt
   grafana_admin_password:
     file: ./secrets/grafana_admin_password.txt
+  postgres_app_password:
+    file: ./secrets/postgres_app_password.txt
 
 volumes:
   postgres_data:

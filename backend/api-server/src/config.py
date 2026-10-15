@@ -5,11 +5,11 @@ from urllib.parse import quote_plus
 logger = logging.getLogger(__name__)
 
 # Postgres environment
-POSTGRES_USER = os.getenv("POSTGRES_READONLY_USER")
+POSTGRES_USER = os.getenv("POSTGRES_APP_USER")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
 POSTGRES_HOST = os.getenv("POSTGRES_HOST")
 POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
-password_file_path_postgres = os.getenv("POSTGRES_READONLY_PASSWORD_FILE")
+password_file_path_postgres = os.getenv("POSTGRES_APP_PASSWORD_FILE")
 
 if password_file_path_postgres and os.path.exists(password_file_path_postgres):
     try:
@@ -17,9 +17,9 @@ if password_file_path_postgres and os.path.exists(password_file_path_postgres):
             POSTGRES_PASSWORD = p.read().strip()
     except OSError as exc:
         logger.warning(f"Unable to read Postgres password file {password_file_path_postgres}: {exc}")
-        POSTGRES_PASSWORD = os.getenv("POSTGRES_READONLY_PASSWORD")
+        POSTGRES_PASSWORD = os.getenv("POSTGRES_APP_PASSWORD")
 else:
-    POSTGRES_PASSWORD = os.getenv("POSTGRES_READONLY_PASSWORD")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_APP_PASSWORD")
 
 DB_PASSWORD_ESCAPED = quote_plus(POSTGRES_PASSWORD) if POSTGRES_PASSWORD else ""
 if not POSTGRES_USER or not POSTGRES_DB or not DB_PASSWORD_ESCAPED:
@@ -29,6 +29,21 @@ if not POSTGRES_USER or not POSTGRES_DB or not DB_PASSWORD_ESCAPED:
         db={bool(POSTGRES_DB)} \
         password_loaded={bool(DB_PASSWORD_ESCAPED)} \
         password_file={password_file_path_postgres}"
+    )
+
+JWT_SECRET_FILE = os.getenv("JWT_SECRET_FILE") or os.getenv("JWT_SECRET")
+JWT_SECRET = os.getenv("JWT_SECRET")
+
+if JWT_SECRET_FILE and os.path.exists(JWT_SECRET_FILE):
+    try:
+        with open(JWT_SECRET_FILE, "r", encoding="utf-8") as f:
+            JWT_SECRET = f.read().strip()
+    except OSError as exc:
+        logger.warning(f"Unable to read JWT secret file {JWT_SECRET_FILE}: {exc}")
+
+if not JWT_SECRET:
+    logger.warning(
+        "JWT secret is not configured. Set JWT_SECRET or JWT_SECRET_FILE to a non-empty value."
     )
 
 # Database URL for SQLAlchemy
