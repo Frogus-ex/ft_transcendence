@@ -138,7 +138,7 @@ Here's what it should look like:
 The candle endpoint is used to return the OHLC time series for the charting UI. A typical test involves:
 
 - selecting a currency symbol;
-- choosing an interval such as `1m` or `15m`;
+- choosing an interval such as `1m` or `5m`;
 - setting a limit for the data points;
 - validating that the response contains the series required to render the chart correctly.
 
@@ -175,7 +175,7 @@ Then call `GET /export` and provide the parameters of your choice.
 Available arguments for each variable:  
 - symbol: `BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `XRPUSDT`, `ADAUSDT`
 - format: `json`, `csv`, `xml`
-- interval: `1m`, `15m`, `1h`, `4h`, `1d`, `1w`
+- interval: `1m`, `5m`, `1h`, `1d`, `1w`
 - limit: positive integer
 
 The response format depends on the selected export type: for `json`, the endpoint returns the data as a JSON string, while `csv` and `xml` responses are returned as downloadable files in the requested format.
