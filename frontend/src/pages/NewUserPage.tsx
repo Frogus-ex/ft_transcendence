@@ -79,6 +79,13 @@ const NewUserPage = () => {
 				{
 					headers: { 'Content-Type': 'application/json' }
 				});
+			const { user } = response.data;
+			setAuth({
+				id: user.id,
+				username: user.username,
+				avatarUrl: user.avatarUrl,
+			});
+			navigate("/profile");
 		} catch (err) {
 			if (axios.isAxiosError(err)) {
 			if (!err.response) {

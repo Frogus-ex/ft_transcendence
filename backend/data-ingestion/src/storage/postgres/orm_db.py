@@ -10,8 +10,8 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 engine = create_engine(
     DB_URL,
     echo=False,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5,
+    max_overflow=5,
     pool_pre_ping=True,
 )
 
