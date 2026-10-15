@@ -53,7 +53,7 @@ function ProfilePage() {
 	const navigate = useNavigate();
 
 	const [user, setUser] = useState<UserMe | null>(null);
-	const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+	// const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 
@@ -75,12 +75,15 @@ function ProfilePage() {
 				// Get the data from PostgreSQL database
 				// Promise is used to handle asynchronous operations
 				// Promise.all() only fulfills when every promise has been fulfilled correctly, and rejects all when one rejects
+				// const [userRes, portfolioRes] = await Promise.all ([
+				// 	api.get<UserMe>("/api/users/me", config),
+				// 	api.get<Portfolio>("/api/portfolio", config),
+				// ]);
 				const [userRes] = await Promise.all ([
 					api.get<UserMe>("/api/users/me", config),
-					// api.get<Portfolio>("/api/portfolio", config),
 				]);
 				setUser(userRes.data);
-				// setPortfolio(portfolioRes.data)
+				// setPortfolio(portfolioRes.data);
 			} catch (error) {
 				if (controller.signal.aborted) return;
 				if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -96,7 +99,8 @@ function ProfilePage() {
 		return () => controller.abort();
 	}, [auth?.accessToken, navigate]);
 
-	if (error || !user || !portfolio) return <p className="p-6 text-red-500">{error}</p>;
+	// if (error || !user || !portfolio) return <p className="p-6 text-red-500">{error}</p>
+	if (error || !user) return <p className="p-6 text-red-500">{error}</p>
 
 	return (
 	<div className="p-6">
@@ -111,7 +115,7 @@ function ProfilePage() {
 			<div>
 			<p className="text-white font-semibold text-lg">{user.username}</p>
 			<Tooltip text="Online">
-				<Badge variant="online" size="medium" />Tom Lorette
+				<Badge variant="online" size="medium" />{user.username}
 			</Tooltip>
 			</div>
 		</div>

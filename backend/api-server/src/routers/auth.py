@@ -13,10 +13,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import Users, Wallet
 from database.orm_db import get_async_session
+from config import JWT_SECRET
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
-SECRET_KEY = 
 ALGORITHM = 'HS256'
 
 #Password hashing
@@ -85,7 +85,7 @@ async def authenticate_user(email: str, password:str, db):
 
 def create_access_token(email: str, id: int, expires_delta: timedelta):
 	encode = {"sub": str(id), "email": email, "exp": datetime.now(timezone.utc) + expires_delta,}
-	return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+	return jwt.encode(encode, JWT_SECRET, algorithm=ALGORITHM)
 
 @router.post("/auth/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 async def login(req: LoginRequest, db: db_dependency):
@@ -100,7 +100,7 @@ async def login(req: LoginRequest, db: db_dependency):
 @router.get("/users/me", response_model=UserMeOut)
 async def profile(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)], db: db_dependency):
 	try:
-		payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
 		user_id=int(payload["sub"])
 	except (JWTError, KeyError, ValueError):
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
