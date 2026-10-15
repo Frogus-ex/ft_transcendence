@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
-import TimeframeSelector from "./TimeframeSelector";
+import TimeframeSelector, { type Timeframe } from "./TimeframeSelector";
 import { generateMockCandles } from "../data/mockMarket";
 import { useMarket } from "../context/MarketContext";
 
-type Timeframe = "1m" | "5m" | "1h" | "1D" | "7D";
 
 const stepSecondsByTimeframe: Record<Timeframe, number> = {
   "1m": 60,
