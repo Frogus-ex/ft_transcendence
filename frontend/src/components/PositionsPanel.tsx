@@ -1,20 +1,21 @@
-import { mockPortfolio } from "../data/mockPortfolio";
+import { usePortfolio } from "../context/PortfolioContext";
 import { priceColors } from "../styles/tokens";
 
 /**Affiche le Portefeuil
  * on parcourt le tableau de positions et on génère un bloc par position, avec key={position.symbol}
  */
 function PositionsPanel() {
+  const {portfolio} = usePortfolio();
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
       <div className="flex justify-between text-sm">
         <span className="text-gray-400">Solde disponible</span>
         <span className="text-gray-100 font-semibold">
-          ${mockPortfolio.balance.toLocaleString()}
+          ${portfolio.balance.toLocaleString()}
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        {mockPortfolio.positions.map((position) => (
+        {portfolio.positions.map((position) => (
           <div
             key={position.symbol}
             className="flex justify-between items-center text-sm border-t border-[#1f1f1f] pt-2"

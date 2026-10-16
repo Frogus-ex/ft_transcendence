@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { mockWatchlist } from "../data/mockMarket";
 import { priceColors } from "../styles/tokens";
+import { useMarket } from "../context/MarketContext";
 
 /**
  * Watchlist — liste des actifs disponibles, avec sélection.
@@ -8,14 +8,14 @@ import { priceColors } from "../styles/tokens";
  * de MarketContext plus tard.
  */
 function Watchlist() {
-  const [selectedSymbol, setSelectedSymbol] = useState(mockWatchlist[0].symbol);
+  const {selectedSymbol, setSelectedSymbol, watchlist} = useMarket();
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-2">
       <span className="text-gray-500 text-xs uppercase tracking-wide mb-1">
         Watchlist
       </span>
-      {mockWatchlist.map((asset) => (
+      {watchlist.map((asset) => (
         <button
           key={asset.symbol}
           type="button"

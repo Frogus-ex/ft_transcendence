@@ -2,10 +2,11 @@ import { useState } from "react";
 import Button from "./Button";
 import Input from "./Input";
 import Label from "./Label";
+import { useMarket } from "../context/MarketContext";
+import { usePortfolio } from "../context/PortfolioContext";
 
 type OrderSide = "buy" | "sell";
 type OrderType = "market" | "limit";
-
 type OrderFormState = {
   side: OrderSide;
   orderType: OrderType;
@@ -18,13 +19,17 @@ type OrderFormState = {
 // Mock : le vrai prix viendra de MarketContext (Phase 3). Une seule constante
 // réutilisée en Zone 1 (affichage) et Zone 7 (calcul), pour ne pas avoir deux
 // valeurs qui pourraient un jour se désynchroniser.
-const currentPrice = 64250.32;
+// const currentPrice = 64250.32;
 
 /**
  * OrderTicket — formulaire de passage d'ordre (Buy/Sell, Market/Limit, SL/TP).
  * Phase 2 : tout est en mock, form géré en local (Option A : un seul useState).
  */
 function OrderTicket() {
+
+  const {selectedSymbol, setSelectedSymbol, watchlist} = useMarket();
+  const selectAsset = watchlist.find((asset) => asset.symbol == selectedSymbol);
+  const {portfolio} = usePortfolio();
   const [form, setForm] = useState<OrderFormState>({
     side: "buy",
     orderType: "market",
@@ -51,10 +56,9 @@ function OrderTicket() {
 
   function handleSubmit() {
     if (!isFormValid()) return;
-
     const order = {
       id: `mock_${Date.now()}`,
-      symbol: "BTCUSDT",
+      symbol: selectedSymbol,
       side: form.side,
       type: form.orderType,
       quantity: parseFloat(form.quantity),
@@ -64,7 +68,6 @@ function OrderTicket() {
       status: "filled",
       timestamp: new Date().toISOString(),
     };
-
     console.log("Mock order submitted:", order);
   }
 
@@ -72,16 +75,16 @@ function OrderTicket() {
   const priceForCost =
     form.orderType === "limit" && form.limitPrice
       ? parseFloat(form.limitPrice)
-      : currentPrice;
+      : selectAsset?.lastPrice ?? 0;
   const estimatedCost = quantityNumber * priceForCost;
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-5 flex flex-col gap-5">
       {/* Zone 1 — En-tête */}
       <div className="flex items-baseline justify-between">
-        <span className="text-gray-100 font-semibold">BTC / USDT</span>
+        <span className="text-gray-100 font-semibold">{selectAsset?.name}</span>
         <span className="text-green-400 font-semibold">
-          ${currentPrice.toLocaleString()}
+          ${(selectAsset?.lastPrice ?? 0).toLocaleString()}
         </span>
       </div>
 
@@ -135,7 +138,7 @@ function OrderTicket() {
 
       {/* Zone 4 — Quantité */}
       <div className="flex flex-col gap-1">
-        <Label htmlFor="qty">Quantité (BTC)</Label>
+        <Label htmlFor="qty">Quantité ({selectedSymbol})</Label>
         <Input
           id="qty"
           type="number"
@@ -191,8 +194,7 @@ function OrderTicket() {
         </div>
         <div className="flex justify-between text-gray-400">
           <span>Solde disponible</span>
-          <span className="text-gray-100">$12,500.00</span>
-        </div>
+            <span className="text-gray-100">${portfolio.balance.toLocaleString()}</span>        </div>
       </div>
 
       {/* Zone 8 — Soumission */}
@@ -204,7 +206,7 @@ function OrderTicket() {
         shape="square"
         onClick={handleSubmit}
       >
-        {form.side === "buy" ? "Buy BTC" : "Sell BTC"}
+        {form.side === "buy" ? `Buy ${selectedSymbol}` : `Sell ${selectedSymbol}`}
       </Button>
     </div>
   );

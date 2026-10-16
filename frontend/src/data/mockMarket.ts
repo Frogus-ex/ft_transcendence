@@ -1,3 +1,5 @@
+import type { UTCTimestamp } from "lightweight-charts";
+
 export type WatchlistAsset = {
   symbol: string;
   name: string;
@@ -12,7 +14,7 @@ export const mockWatchlist: WatchlistAsset[] = [
 ];
 
 export type Candle = {
-  time: number; // timestamp Unix, en secondes
+  time: UTCTimestamp; // timestamp Unix, en secondes
   open: number;
   high: number;
   low: number;
@@ -36,7 +38,7 @@ export function generateMockCandles(
     const high = Math.max(open, close) + Math.random() * basePrice * 0.003;
     const low = Math.min(open, close) - Math.random() * basePrice * 0.003;
 
-    candles.push({ time: now - i * stepSeconds, open, high, low, close });
+    candles.push({ time: (now - i * stepSeconds) as UTCTimestamp, open, high, low, close });
     price = close;
   }
 

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
-import TimeframeSelector from "./TimeframeSelector";
+import TimeframeSelector, { type Timeframe } from "./TimeframeSelector";
 import { generateMockCandles } from "../data/mockMarket";
+import { useMarket } from "../context/MarketContext";
 
-type Timeframe = "1m" | "5m" | "1h" | "1D" | "7D";
 
 const stepSecondsByTimeframe: Record<Timeframe, number> = {
   "1m": 60,
@@ -23,6 +23,12 @@ function PriceChart() {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>("1h");
+
+  
+  //recuper selectedSymbol et watchlist depuis useMarket
+  const {selectedSymbol, setSelectedSymbol, watchlist} = useMarket();
+  //retrouver l'actif selectionne ds watchlist
+  const selectAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
 
   // Crée le graphique UNE SEULE FOIS, au montage du composant.
   useEffect(() => {
@@ -53,15 +59,15 @@ function PriceChart() {
 
   // Régénère les bougies mock à chaque changement de timeframe.
   useEffect(() => {
-    if (!seriesRef.current) return;
-    const candles = generateMockCandles(120, 64250, stepSecondsByTimeframe[timeframe]);
+    if (!seriesRef.current || !selectAsset) return;
+    const candles = generateMockCandles(120, selectAsset.lastPrice, stepSecondsByTimeframe[timeframe]);
     seriesRef.current.setData(candles);
-  }, [timeframe]);
+  }, [timeframe, selectedSymbol]);
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
       <div className="flex items-center justify-between">
-        <span className="text-gray-100 font-semibold">BTC / USDT</span>
+        <span className="text-gray-100 font-semibold">{selectAsset?.name}</span>
         <TimeframeSelector value={timeframe} onChange={setTimeframe} />
       </div>
       <div ref={containerRef} className="flex-1" />

@@ -1,4 +1,4 @@
-type Timeframe = "1m" | "5m" | "1h" | "1D";
+export type Timeframe = "1m" | "5m" | "1h" | "1D" | "7D";
 
 type TimeframeSelectorProps = {
   value: Timeframe;
