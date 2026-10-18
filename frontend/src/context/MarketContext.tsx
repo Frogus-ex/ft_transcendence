@@ -1,35 +1,62 @@
-import { createContext, useContext, useState } from "react";
-import { mockWatchlist } from "../data/mockMarket";
+import { createContext, useContext, useState, useEffect } from "react";
+import { apiFetch } from "../api/client";
+import { symbolNames } from "../data/symbolNames";
+
+export type WatchlistAsset = {
+	symbol: string;
+	name: string;
+	lastPrice: number;
+	change24h: number;
+};
+
+// Forme brute renvoyée par GET /api/markets (pas de "name")
+type ApiWatchlistAsset = {
+	symbol: string;
+	lastPrice: number;
+	change24h: number;
+};
 
 type MarketContextValue = {
-  selectedSymbol: string;
-  setSelectedSymbol: (symbol: string) => void;
-  watchlist: typeof mockWatchlist;
+	selectedSymbol: string;
+	setSelectedSymbol: (symbol: string) => void;
+	watchlist: WatchlistAsset[];
+	isLoading: boolean;
 };
 
 const MarketContext = createContext<MarketContextValue | undefined>(undefined);
 
-/**
- * REMPLI LA BOITE ET DECIDE QUI A LE DROIT D'Y ACCEDER 
- * Contient le usestate et 'verse' ces donnee dans la boite MarketContext
- * Tout composant place a l'interieur de ses balisesa acces a la boite MarketContext (=children)
- */
 export function MarketProvider({ children }: { children: React.ReactNode }) {
-  const [selectedSymbol, setSelectedSymbol] = useState(mockWatchlist[0].symbol);
-  return (
-    <MarketContext.Provider value={{selectedSymbol, setSelectedSymbol, watchlist: mockWatchlist}}>
-        {children}
-    </MarketContext.Provider>
-  );
+	const [watchlist, setWatchlist] = useState<WatchlistAsset[]>([]);
+	const [selectedSymbol, setSelectedSymbol] = useState<string>("");
+	const [isLoading, setIsLoading] = useState(true);
+
+	useEffect(() => {
+		async function loadWatchlist() {
+			const data = await apiFetch<ApiWatchlistAsset[]>("/markets");
+			const enrichedWatchlist: WatchlistAsset[] = data.map((asset) => ({
+			...asset,
+			name: symbolNames[asset.symbol] ?? asset.symbol,
+		}));
+		setWatchlist(enrichedWatchlist);
+		if (enrichedWatchlist.length > 0){
+			setSelectedSymbol(enrichedWatchlist[0].symbol);
+		}
+		setIsLoading(false);
+		}
+		loadWatchlist();
+	}, []);
+
+	return (
+	<MarketContext.Provider value={{ selectedSymbol, setSelectedSymbol, watchlist, isLoading }}>
+		{children}
+	</MarketContext.Provider>
+	);
 }
 
-/**
- * Fonction utilitaire qui vient piocher dans la boite
- */
 export function useMarket() {
-  const context = useContext(MarketContext);
-  if (context === undefined) {
-    throw new Error("useMarket doit être utilisé à l'intérieur d'un <MarketProvider>");
-  }
-  return context;
+	const context = useContext(MarketContext);
+	if (context === undefined) {
+		throw new Error("useMarket doit être utilisé à l'intérieur d'un <MarketProvider>");
+	}
+	return context;
 }
