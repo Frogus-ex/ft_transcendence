@@ -44,3 +44,26 @@ export function generateMockCandles(
 
   return candles;
 }
+
+// Forme brute telle que renvoyée par GET /api/markets/{symbol}/candles
+export type ApiCandle = {
+  symbol: string;
+  interval: string;
+  time: string;   // ISO, ex: "2026-10-15T19:07:00+00:00"
+  open: string;    // nombre en chaîne
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+};
+
+// Convertit une bougie brute de l'API vers le format attendu par lightweight-charts
+export function mapApiCandleToCandle(raw: ApiCandle): Candle {
+  return {
+    time: Math.floor(new Date(raw.time).getTime() / 1000) as UTCTimestamp,
+    open: parseFloat(raw.open),
+    high: parseFloat(raw.high),
+    low: parseFloat(raw.low),
+    close: parseFloat(raw.close),
+  };
+}
