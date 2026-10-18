@@ -1,34 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import TimeframeSelector, { type Timeframe } from "./TimeframeSelector";
-import { generateMockCandles } from "../data/mockMarket";
+import { apiFetch } from "../api/client";
+import { mapApiCandleToCandle, type ApiCandle } from "../data/mockMarket";
 import { useMarket } from "../context/MarketContext";
 
-
-const stepSecondsByTimeframe: Record<Timeframe, number> = {
-  "1m": 60,
-  "5m": 300,
-  "1h": 3600,
-  "1D": 86400,
-  "7D": 604800,
-};
-
-/**
- * PriceChart — graphique en chandelier (lightweight-charts) + timeframe.
- * Phase 2 : bougies générées en mock. Le vrai flux viendra de MarketContext
- * (WebSocket + GET /candles) en Phase 3.
- */
 function PriceChart() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const [timeframe, setTimeframe] = useState<Timeframe>("1h");
+  const [timeframe, setTimeframe] = useState<Timeframe>("1m");
 
-  
-  //recuper selectedSymbol et watchlist depuis useMarket
-  const {selectedSymbol, setSelectedSymbol, watchlist} = useMarket();
-  //retrouver l'actif selectionne ds watchlist
-  const selectAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
+  const { selectedSymbol, watchlist } = useMarket();
+  const selectedAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
 
   // Crée le graphique UNE SEULE FOIS, au montage du composant.
   useEffect(() => {
@@ -57,17 +41,25 @@ function PriceChart() {
     };
   }, []);
 
-  // Régénère les bougies mock à chaque changement de timeframe.
+  // Récupère les vraies bougies depuis l'API à chaque changement de symbole/timeframe.
   useEffect(() => {
-    if (!seriesRef.current || !selectAsset) return;
-    const candles = generateMockCandles(120, selectAsset.lastPrice, stepSecondsByTimeframe[timeframe]);
-    seriesRef.current.setData(candles);
+    if (!seriesRef.current || !selectedSymbol) return;
+
+    async function loadCandles() {
+      const rawCandles = await apiFetch<ApiCandle[]>(
+        `/markets/${selectedSymbol}/candles?interval=${timeframe}&limit=120`
+      );
+      const candles = rawCandles.map(mapApiCandleToCandle);
+      seriesRef.current!.setData(candles);
+    }
+
+    loadCandles();
   }, [timeframe, selectedSymbol]);
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
       <div className="flex items-center justify-between">
-        <span className="text-gray-100 font-semibold">{selectAsset?.name}</span>
+        <span className="text-gray-100 font-semibold">{selectedAsset?.name}</span>
         <TimeframeSelector value={timeframe} onChange={setTimeframe} />
       </div>
       <div ref={containerRef} className="flex-1" />
