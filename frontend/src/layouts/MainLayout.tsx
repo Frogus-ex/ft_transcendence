@@ -3,7 +3,7 @@ import Modal from "../components/Modal";
 import Button from "../components/Button";
 import ChatWidget from "../components/ChatWidget";
 import { Outlet, Link } from "react-router";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../context/AuthContext";
 import Avatar from "../components/Avatar";
 import {
   BadgeDollarSign,
@@ -23,10 +23,10 @@ import {
 } from "../styles/tokens";
 
 function MainLayout() {
-  const { auth, setAuth } = useAuth();
+  const { user, logout} = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const isLoggedIn = Boolean(auth.accessToken);
+  const isLoggedIn = Boolean(user);
 
   if (!isLoggedIn) {
     return (
@@ -139,19 +139,19 @@ function MainLayout() {
         >
           <Link
             to="/profile"
-            aria-label={`View ${auth.username ?? "your"} profile`}
+            aria-label={`View ${user?.username ?? "your"} profile`}
             className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold hover:bg-gray-800"
           >
-            {auth.avatarUrl ? (
+            {user?.avatarUrl ? (
               <Avatar
-                src={auth.avatarUrl}
+                src={user.avatarUrl}
                 alt=""
                 size="small"
               />
             ) : (
               <CircleUser size={24} aria-hidden="true" />
             )}
-            <span>{auth.username ?? "Profile"}</span>
+            <span>{user?.username ?? "Profile"}</span>
           </Link>
         </header>
         <Outlet context={{ isLoggedIn }} />
@@ -167,7 +167,7 @@ function MainLayout() {
             size="medium"
             type="button"
             onClick={() => {
-              setAuth({});
+              logout();
               setIsLogoutModalOpen(false);
             }}
           >
