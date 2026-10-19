@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { apiFetch } from "../api/client";
 import { symbolNames } from "../data/symbolNames";
+import { useMarketSocket } from "../hooks/useMarketSocket";
 
 export type WatchlistAsset = {
 	symbol: string;
@@ -49,8 +50,27 @@ export function MarketProvider({ children }: { children: React.ReactNode }) {
 	return (
 	<MarketContext.Provider value={{ selectedSymbol, setSelectedSymbol, watchlist, isLoading }}>
 		{children}
+		{watchlist.map((asset) => (
+			<WatchlistPriceSocket key={asset.symbol} symbol={asset.symbol} setWatchlist={setWatchlist} />
+		))}
 	</MarketContext.Provider>
 	);
+}
+
+// Un composant par symbole : ouvre son propre WS et met à jour lastPrice en live.
+function WatchlistPriceSocket({
+	symbol,
+	setWatchlist,
+}: {
+	symbol: string;
+	setWatchlist: React.Dispatch<React.SetStateAction<WatchlistAsset[]>>;
+}) {
+	useMarketSocket(symbol, (tick) => {
+		setWatchlist((prev) =>
+			prev.map((asset) => (asset.symbol === tick.symbol ? { ...asset, lastPrice: tick.price } : asset))
+		);
+	});
+	return null;
 }
 
 export function useMarket() {
