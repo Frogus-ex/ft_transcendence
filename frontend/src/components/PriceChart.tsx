@@ -2,19 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import TimeframeSelector, { type Timeframe } from "./TimeframeSelector";
 import { apiFetch } from "../api/client";
-import { mapApiCandleToCandle, type ApiCandle } from "../data/mockMarket";
+import { mapApiCandleToCandle, type ApiCandle, type Candle } from "../data/mockMarket";
 import { useMarket } from "../context/MarketContext";
+import { useMarketSocket } from "../hooks/useMarketSocket";
 
 function PriceChart() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const lastCandleRef = useRef<Candle | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>("1m");
 
   const { selectedSymbol, watchlist } = useMarket();
   const selectedAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
 
-  // Crée le graphique UNE SEULE FOIS, au montage du composant.
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -41,7 +42,6 @@ function PriceChart() {
     };
   }, []);
 
-  // Récupère les vraies bougies depuis l'API à chaque changement de symbole/timeframe.
   useEffect(() => {
     if (!seriesRef.current || !selectedSymbol) return;
 
@@ -51,10 +51,28 @@ function PriceChart() {
       );
       const candles = rawCandles.map(mapApiCandleToCandle);
       seriesRef.current!.setData(candles);
+      lastCandleRef.current = candles.length > 0 ? candles[candles.length - 1] : null;
     }
 
     loadCandles();
   }, [timeframe, selectedSymbol]);
+
+  // Live update : chaque tick ajuste la dernière bougie affichée (close/high/low).
+  // Limite assumée : ne crée pas de nouvelle bougie au franchissement d'intervalle,
+  // il faut un re-fetch (changement de timeframe/symbole) pour la voir apparaître.
+  useMarketSocket(selectedSymbol, (tick) => {
+    if (!seriesRef.current || !lastCandleRef.current) return;
+    if (tick.symbol !== selectedSymbol) return;
+
+    const updated: Candle = {
+      ...lastCandleRef.current,
+      close: tick.price,
+      high: Math.max(lastCandleRef.current.high, tick.price),
+      low: Math.min(lastCandleRef.current.low, tick.price),
+    };
+    lastCandleRef.current = updated;
+    seriesRef.current.update(updated);
+  });
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
