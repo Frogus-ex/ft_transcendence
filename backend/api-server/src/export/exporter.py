@@ -14,7 +14,7 @@ from utils import CandleValidation, Format, Symbol, Interval, limiter
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/export", tags=["Export"])
+router = APIRouter(prefix="/api/export", tags=["Export"])
 
 
 @router.get("")
