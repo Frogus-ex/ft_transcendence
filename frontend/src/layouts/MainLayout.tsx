@@ -5,6 +5,8 @@ import ChatWidget from "../components/ChatWidget";
 import { Outlet, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import Avatar from "../components/Avatar";
+import Footer from "../components/Footer";
+
 import {
   BadgeDollarSign,
   Menu,
@@ -58,6 +60,7 @@ function MainLayout() {
         </nav>
         <div className="flex-1 flex flex-col">
           <Outlet context={{ isLoggedIn }} />
+		  <Footer />
         </div>
       </div>
     );
@@ -155,6 +158,7 @@ function MainLayout() {
           </Link>
         </header>
         <Outlet context={{ isLoggedIn }} />
+		<Footer />
       </div>
       <Modal
         isOpen={isLogoutModalOpen}
