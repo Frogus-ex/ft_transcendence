@@ -2,6 +2,8 @@ import csv
 import io
 import xml.etree.ElementTree as et
 import logging
+from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
@@ -25,11 +27,13 @@ async def export_market_data(
     format: Format,
     interval: Interval = "1m",
     limit: int = Query(100, ge=1, le=1000),
+    start: Optional[datetime] = Query(None),
+    end: Optional[datetime] = Query(None),
     session: AsyncSession = Depends(get_async_session)
 ):
     """Export market data for a symbol in the requested format."""
 
-    candles = await fetch_candles(symbol, interval, limit, session)
+    candles = await fetch_candles(symbol, interval, limit, session, start, end)
 
     if format == "json":
         return candles
@@ -58,7 +62,6 @@ async def export_market_data(
                 child.text = str(value)
 
         et.indent(root, space="  ", level=0)
-
         xml_bytes = et.tostring(root, encoding="utf-8", method="xml", xml_declaration=True)
 
         return Response(

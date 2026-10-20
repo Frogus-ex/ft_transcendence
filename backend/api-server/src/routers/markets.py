@@ -1,5 +1,6 @@
 import time
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 from fastapi import Depends, APIRouter, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import redis.asyncio as aredis
@@ -13,7 +14,6 @@ from routers import fetch_candles
 router = APIRouter(prefix="/api/markets", tags=["Markets"])
 
 
-# For watchlist
 @router.get("")
 async def   get_watchlist(r: aredis.Redis = Depends(get_redis)):
     """Gets the latest price of the currency and compare it to the price from 24-hrs ago"""
@@ -25,7 +25,6 @@ async def   get_watchlist(r: aredis.Redis = Depends(get_redis)):
     watchlist = []
 
     for symbol in SYMBOLS:
-        # Getting the latest price of each currency
         last = await ts.get(f"ts:{symbol}:ticks")
         ref = await ts.range(
             f"ts:{symbol}:ohlc:1h:close",
@@ -39,7 +38,6 @@ async def   get_watchlist(r: aredis.Redis = Depends(get_redis)):
         latest_price = last[1]
         old_price = ref[0][1] if ref else None
 
-        # Calculating price variation in percentage
         if latest_price and old_price and old_price > 0:
             change_24h = ((latest_price - old_price) / old_price) * 100
         else:
@@ -54,14 +52,15 @@ async def   get_watchlist(r: aredis.Redis = Depends(get_redis)):
     return watchlist
 
 
-# HTTP Ticker, main graph (Database)
 @router.get("/{symbol}/candles", response_model=List[CandleValidation])
 async def   get_candles(
     symbol: Symbol,
     interval: Interval = "1m",
     limit: int = Query(100, ge=1, le=1000),
+    start: Optional[datetime] = Query(None, description="Date de début (ISO 8601), incluse"),
+    end: Optional[datetime] = Query(None, description="Date de fin (ISO 8601), incluse"),
     session: AsyncSession = Depends(get_async_session)
 ):
-    """Collect the last x ticks (default 100) from the table "market_candles" with a given interval (default 1-min)"""
+    """Collect candles, optionnellement restreint à une plage [start, end]."""
 
-    return await fetch_candles(symbol, interval, limit, session)
+    return await fetch_candles(symbol, interval, limit, session, start, end)
