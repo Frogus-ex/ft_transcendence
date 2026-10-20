@@ -10,6 +10,7 @@ from jose import jwt, JWTError
 from typing import Annotated
 from passlib.context import CryptContext
 from utils import limiter
+from auth_deps import get_current_user_id
 
 from starlette import status
 from sqlalchemy import select
@@ -130,34 +131,24 @@ async def login(request: Request, req: LoginRequest, db: db_dependency):
 
 # Request authorization header, 
 # Response { id, username, email, avatarUrl, createdAt }
+
 @router.get("/users/me", response_model=UserMeOut)
-async def profile(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)], db: db_dependency):
-	try:
-		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
-		user_id=int(payload["sub"])
-	except (JWTError, KeyError, ValueError):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
-	
+async def profile(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
 	result = await db.execute(select(Users).where(Users.id == user_id))
 	user = result.scalar_one_or_none()
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
 	return user
 
+
 @router.put("/users/me", response_model=UserMeOut)
 @limiter.limit("10/minute")
 async def update_profile(
 	request: Request,
 	update: UpdateProfileRequest,
-	credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+	user_id: Annotated[int, Depends(get_current_user_id)],
 	db: db_dependency,
 ):
-	try:
-		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
-		user_id = int(payload["sub"])
-	except (JWTError, KeyError, ValueError):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
-
 	result = await db.execute(select(Users).where(Users.id == user_id))
 	user = result.scalar_one_or_none()
 	if user is None:
@@ -172,14 +163,9 @@ async def update_profile(
 	await db.refresh(user)
 	return user
 
+
 @router.get("/portfolio", response_model=PortfolioOut)
-async def get_portfolio(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)], db: db_dependency):
-	try:
-		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
-		user_id=int(payload["sub"])
-	except (JWTError, KeyError, ValueError):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
-	
+async def get_portfolio(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
 	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
 	portfolio = result.scalar_one_or_none()
 	if portfolio is None:
