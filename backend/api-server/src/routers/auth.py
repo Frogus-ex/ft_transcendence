@@ -1,7 +1,7 @@
 import json
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
@@ -9,6 +9,7 @@ from datetime import timedelta, datetime, timezone
 from jose import jwt, JWTError
 from typing import Annotated
 from passlib.context import CryptContext
+from utils import limiter
 
 from starlette import status
 from sqlalchemy import select
@@ -115,7 +116,8 @@ def create_access_token(email: str, id: int, expires_delta: timedelta):
 	return jwt.encode(encode, JWT_SECRET, algorithm=ALGORITHM)
 
 @router.post("/auth/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
-async def login(req: LoginRequest, db: db_dependency):
+@limiter.limit("5/minute")
+async def login(request: Request, req: LoginRequest, db: db_dependency):
 	user = await authenticate_user(req.email, req.password, db)
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
