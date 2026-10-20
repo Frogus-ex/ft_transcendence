@@ -3,6 +3,7 @@ import Card from "../components/Card";
 import Tooltip from "../components/Tooltip";
 import Avatar from "../components/Avatar";
 import Badge from "../components/Badge";
+import ProfileEditForm from "../components/ProfileEditForm";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
@@ -65,6 +66,7 @@ function ProfilePageContent() {
           </div>
         </div>
       </Card>
+	  <ProfileEditForm />
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <Card padding="medium">
           <div className="flex items-center justify-between mb-2">
