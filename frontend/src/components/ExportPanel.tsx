@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Button from "./Button";
+import DateRangeFilter from "./DateRangeFilter";
 import { apiDownload } from "../api/client";
 import { useMarket } from "../context/MarketContext";
 
@@ -13,6 +14,8 @@ function ExportPanel() {
   const [symbol, setSymbol] = useState(selectedSymbol);
   const [interval, setInterval] = useState<ExportInterval>("1h");
   const [limit, setLimit] = useState(100);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,10 +27,16 @@ function ExportPanel() {
     setError(null);
     setIsExporting(format);
     try {
-      await apiDownload(
-        `/export?symbol=${activeSymbol}&format=${format}&interval=${interval}&limit=${limit}`,
-        `${activeSymbol}.${format}`
-      );
+      const params = new URLSearchParams({
+        symbol: activeSymbol,
+        format,
+        interval,
+        limit: String(limit),
+      });
+      if (startDate) params.set("start", startDate);
+      if (endDate) params.set("end", endDate);
+
+      await apiDownload(`/export?${params.toString()}`, `${activeSymbol}.${format}`);
     } catch {
       setError("Échec de l'export, réessaie.");
     } finally {
@@ -72,37 +81,15 @@ function ExportPanel() {
         className="bg-black border border-gray-700 rounded-md text-sm text-gray-200 px-2 py-1"
       />
 
-      <Button
-        variant="secondary"
-        size="small"
-        type="button"
-        icon={false}
-        shape="square"
-        disabled={!activeSymbol || isExporting === "csv"}
-        onClick={() => handleExport("csv")}
-      >
+      <DateRangeFilter start={startDate} end={endDate} onChangeStart={setStartDate} onChangeEnd={setEndDate} />
+
+      <Button variant="secondary" size="small" type="button" icon={false} shape="square" disabled={!activeSymbol || isExporting === "csv"} onClick={() => handleExport("csv")}>
         {isExporting === "csv" ? "Export..." : "Export CSV"}
       </Button>
-      <Button
-        variant="secondary"
-        size="small"
-        type="button"
-        icon={false}
-        shape="square"
-        disabled={!activeSymbol || isExporting === "json"}
-        onClick={() => handleExport("json")}
-      >
+      <Button variant="secondary" size="small" type="button" icon={false} shape="square" disabled={!activeSymbol || isExporting === "json"} onClick={() => handleExport("json")}>
         {isExporting === "json" ? "Export..." : "Export JSON"}
       </Button>
-      <Button
-        variant="secondary"
-        size="small"
-        type="button"
-        icon={false}
-        shape="square"
-        disabled={!activeSymbol || isExporting === "xml"}
-        onClick={() => handleExport("xml")}
-      >
+      <Button variant="secondary" size="small" type="button" icon={false} shape="square" disabled={!activeSymbol || isExporting === "xml"} onClick={() => handleExport("xml")}>
         {isExporting === "xml" ? "Export..." : "Export XML"}
       </Button>
 
