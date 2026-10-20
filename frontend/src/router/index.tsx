@@ -8,6 +8,8 @@ import ProfilePage from "../pages/ProfilePage";
 import NewUserPage from "../pages/NewUserPage";
 import GdprPage from "../pages/GdprPage";
 import PrivateRoute from "../components/PrivateRoute";
+import PrivacyPage from "../pages/PrivacyPage";
+import TermsPage from "../pages/TermsPage";
 
 const router = createBrowserRouter([
   {
@@ -26,6 +28,8 @@ const router = createBrowserRouter([
         ),
       },
       { path: "markets", element: <MarketsPage /> },
+	  { path: "privacy", element: <PrivacyPage /> },
+      { path: "terms", element: <TermsPage /> },
       { path: "gdpr", element: <GdprPage /> },
 	  { path: "create_user", element: <NewUserPage /> },
     ],
