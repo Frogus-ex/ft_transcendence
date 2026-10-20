@@ -4,7 +4,7 @@ import Tooltip from "../components/Tooltip";
 import Avatar from "../components/Avatar";
 import Badge from "../components/Badge";
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { MarketProvider } from "../context/MarketContext";
 import { PortfolioProvider, usePortfolio, type Order } from "../context/PortfolioContext";
@@ -119,6 +119,11 @@ function ProfilePageContent() {
           })}
         </div>
       </Card>
+	  <div className="mt-6">
+        <Link to="/gdpr" className="text-sm text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+          Gérer mes données (RGPD)
+        </Link>
+      </div>
     </div>
   );
 }
