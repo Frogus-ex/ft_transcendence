@@ -6,6 +6,7 @@ import MarketsPage from "../pages/MarketsPage";
 import ContactsPage from "../pages/ContactsPage";
 import ProfilePage from "../pages/ProfilePage";
 import NewUserPage from "../pages/NewUserPage";
+import PrivateRoute from "../components/PrivateRoute";
 
 const router = createBrowserRouter([
   {
@@ -15,7 +16,14 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "profile", element: <ProfilePage /> },
-      { path: "contacts", element: <ContactsPage /> },
+      {
+        path: "contacts",
+        element: (
+          <PrivateRoute>
+            <ContactsPage />
+          </PrivateRoute>
+        ),
+      },
       { path: "markets", element: <MarketsPage /> },
 	  { path: "create_user", element: <NewUserPage /> },
     ],
