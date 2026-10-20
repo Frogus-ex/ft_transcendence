@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import TimeframeSelector, { type Timeframe } from "./TimeframeSelector";
+import DateRangeFilter from "./DateRangeFilter";
 import { apiFetch } from "../api/client";
 import { mapApiCandleToCandle, type ApiCandle, type Candle } from "../data/mockMarket";
 import { useMarket } from "../context/MarketContext";
@@ -12,9 +13,13 @@ function PriceChart() {
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const lastCandleRef = useRef<Candle | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>("1m");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const { selectedSymbol, watchlist } = useMarket();
   const selectedAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
+
+  const isLiveRange = !startDate && !endDate;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -45,8 +50,12 @@ function PriceChart() {
     if (!seriesRef.current || !selectedSymbol) return;
 
     async function loadCandles() {
+      const params = new URLSearchParams({ interval: timeframe, limit: "120" });
+      if (startDate) params.set("start", startDate);
+      if (endDate) params.set("end", endDate);
+
       const rawCandles = await apiFetch<ApiCandle[]>(
-        `/markets/${selectedSymbol}/candles?interval=${timeframe}&limit=120`
+        `/markets/${selectedSymbol}/candles?${params.toString()}`
       );
       const candles = rawCandles.map(mapApiCandleToCandle);
       seriesRef.current!.setData(candles);
@@ -54,12 +63,9 @@ function PriceChart() {
     }
 
     loadCandles();
-  }, [timeframe, selectedSymbol]);
+  }, [timeframe, selectedSymbol, startDate, endDate]);
 
-  // Live update : chaque tick ajuste la dernière bougie affichée (close/high/low).
-  // Limite assumée : ne crée pas de nouvelle bougie au franchissement d'intervalle,
-  // il faut un re-fetch (changement de timeframe/symbole) pour la voir apparaître.
-  useMarketSocket(selectedSymbol, (tick) => {
+  useMarketSocket(isLiveRange ? selectedSymbol : undefined, (tick) => {
     if (!seriesRef.current || !lastCandleRef.current) return;
     if (tick.symbol !== selectedSymbol) return;
 
@@ -75,9 +81,12 @@ function PriceChart() {
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <span className="text-gray-100 font-semibold">{selectedAsset?.name}</span>
-        <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+        <div className="flex items-center gap-3">
+          <DateRangeFilter start={startDate} end={endDate} onChangeStart={setStartDate} onChangeEnd={setEndDate} />
+          <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+        </div>
       </div>
       <div ref={containerRef} className="flex-1" />
     </div>
