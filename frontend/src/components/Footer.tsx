@@ -26,9 +26,14 @@ function Footer() {
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-white font-medium mb-1">Legal</span>
-          <span className="text-sm">Terms of Service</span>
+          <Link to="/terms" className="text-sm hover:text-white">
+            Terms of Service
+          </Link>
+          <Link to="/privacy" className="text-sm hover:text-white">
+            Privacy Policy
+          </Link>
           <Link to="/gdpr" className="text-sm hover:text-white">
-            Confidentialité (RGPD)
+            Your data (GDPR)
           </Link>
         </div>
       </div>
