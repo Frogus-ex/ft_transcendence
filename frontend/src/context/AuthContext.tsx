@@ -72,12 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
-  async function updateProfile(username: string, avatarUrl: string) {
+    async function updateProfile(username: string) {
     if (!token) throw new Error("Not authenticated");
     const updated = await apiFetch<User>("/users/me", {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ username, avatarUrl }),
+      body: JSON.stringify({ username }),
     });
     setUser(updated);
   }
