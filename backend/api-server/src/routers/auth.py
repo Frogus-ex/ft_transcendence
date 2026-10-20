@@ -49,6 +49,10 @@ class UserMeOut(UserOut):
 	email: str
 	createdAt: datetime = Field(validation_alias="created_at")
 
+class UpdateProfileRequest(BaseModel):
+	model_config = ConfigDict(str_strip_whitespace=True)
+	username: str = Field(min_length=3, max_length=50)
+
 class LoginResponse(BaseModel):
 	token: str
 	user: UserOut
@@ -140,6 +144,33 @@ async def profile(credentials: Annotated[HTTPAuthorizationCredentials, Depends(b
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
 	return user
 
+@router.put("/users/me", response_model=UserMeOut)
+@limiter.limit("10/minute")
+async def update_profile(
+	request: Request,
+	update: UpdateProfileRequest,
+	credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+	db: db_dependency,
+):
+	try:
+		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
+		user_id = int(payload["sub"])
+	except (JWTError, KeyError, ValueError):
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
+
+	result = await db.execute(select(Users).where(Users.id == user_id))
+	user = result.scalar_one_or_none()
+	if user is None:
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
+
+	user.username = update.username
+	try:
+		await db.commit()
+	except IntegrityError:
+		await db.rollback()
+		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already in use")
+	await db.refresh(user)
+	return user
 
 @router.get("/portfolio", response_model=PortfolioOut)
 async def get_portfolio(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)], db: db_dependency):
