@@ -22,8 +22,7 @@ function PriceChart() {
     const chart = createChart(containerRef.current, {
       layout: { background: { color: "#050505" }, textColor: "#9ca3af" },
       grid: { vertLines: { color: "#1f1f1f" }, horzLines: { color: "#1f1f1f" } },
-      width: containerRef.current.clientWidth,
-      height: 300,
+      autoSize: true,
     });
 
     const series = chart.addCandlestickSeries({
