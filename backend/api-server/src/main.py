@@ -16,7 +16,7 @@ from sqlalchemy import Table
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
-from routers import markets, websockets, auth, orders
+from routers import markets, websockets, auth, orders, gdpr
 from utils import manager, limiter
 from export import exporter
 from database.models import Users, Portfolio, Order
@@ -133,3 +133,4 @@ app.include_router(websockets.router)
 app.include_router(exporter.router)
 app.include_router(auth.router)
 app.include_router(orders.router)
+app.include_router(gdpr.router)

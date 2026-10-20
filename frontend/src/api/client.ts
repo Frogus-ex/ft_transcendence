@@ -1,6 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-export async function apiDownload(path: string, fallbackFilename: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+export async function apiDownload(path: string, fallbackFilename: string, init?: RequestInit): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
 
   if (!response.ok) {
     throw new Error(`API error ${response.status}: ${response.statusText}`);
@@ -23,7 +23,14 @@ export async function apiDownload(path: string, fallbackFilename: string): Promi
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, options);
+
   if (!response.ok) {
-	throw new Error(`API error ${response.status}: ${response.statusText}`);}
+    throw new Error(`API error ${response.status}: ${response.statusText}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return await response.json();
 }

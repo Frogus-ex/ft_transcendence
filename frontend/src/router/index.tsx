@@ -6,6 +6,7 @@ import MarketsPage from "../pages/MarketsPage";
 import ContactsPage from "../pages/ContactsPage";
 import ProfilePage from "../pages/ProfilePage";
 import NewUserPage from "../pages/NewUserPage";
+import GdprPage from "../pages/GdprPage";
 import PrivateRoute from "../components/PrivateRoute";
 
 const router = createBrowserRouter([
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
         ),
       },
       { path: "markets", element: <MarketsPage /> },
+      { path: "gdpr", element: <GdprPage /> },
 	  { path: "create_user", element: <NewUserPage /> },
     ],
   },
