@@ -85,6 +85,7 @@ class UserSearchResult(BaseModel):
 	username: str
 	avatarUrl: str | None = None
 	friendshipStatus: FriendshipStatus
+	friendshipId: int | None = None
  
  
 class UserSearchResponse(BaseModel):
@@ -120,6 +121,22 @@ async def list_friends(db: AsyncSession = Depends(get_async_session), current_us
         )
 
     return friends
+
+
+@router.get("/friends/{user_id}/profile")
+async def get_friend_profile(
+    user_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Users = Depends(get_current_user),
+):
+    if await ensure_friendship(db, current_user.id, user_id) is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view friends' profiles.")
+
+    friend = (await db.execute(select(Users).where(Users.id == user_id))).scalar_one_or_none()
+    if friend is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    return {"id": friend.id, "username": friend.username, "avatarUrl": friend.avatar_url}
 
 
 @router.get("/friends/requests")
@@ -406,7 +423,13 @@ def build_search_query(me: int, term: str, limit: int) -> Select:
 	starts_with = case((Users.username.istartswith(term, autoescape=True), 0), else_=1)
  
 	return (
-		select(Users.id, Users.username, Users.avatar_url, friendship_status)
+		select(
+			Users.id,
+			Users.username,
+			Users.avatar_url,
+			Friendships.id.label("friendship_id"),
+			friendship_status,
+		)
 		.outerjoin(Friendships, pair_with_me)
 		# autoescape: a user typing % or _ searches for those characters, not a wildcard
 		.where(Users.id != me, Users.username.icontains(term, autoescape=True))
@@ -416,7 +439,7 @@ def build_search_query(me: int, term: str, limit: int) -> Select:
  
  
 # Request:  Authorization: Bearer <token>, query ?search=<2-50 chars>&limit=<1-20, default 10>
-# Response: { users: [{ id, username, avatarUrl, friendshipStatus }] }
+# Response: { users: [{ id, username, avatarUrl, friendshipStatus, friendshipId }] }
 @router.get("/users", response_model=UserSearchResponse)
 async def search_users(
 	current_user: Users = Depends(get_current_user),
@@ -436,6 +459,7 @@ async def search_users(
 				"username": row.username,
 				"avatarUrl": row.avatar_url,
 				"friendshipStatus": row.friendship_status,
+				"friendshipId": row.friendship_id,
 			}
 			for row in result.all()
 		]
