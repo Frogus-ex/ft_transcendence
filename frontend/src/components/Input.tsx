@@ -12,6 +12,7 @@ type InputProps = {
   onBlur?: () => void;
   min?: number | string;
   step?: number | string;
+  autoComplete?: string;
   onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   "aria-invalid"?: boolean | "true" | "false";
 };

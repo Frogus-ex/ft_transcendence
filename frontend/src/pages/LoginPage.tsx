@@ -71,6 +71,7 @@ function LoginPage() {
 					type="email"
 					size="medium"
 					placeholder="email"
+					autoComplete="email"
 					ref={userRef}
 					/>
 				</div>
@@ -83,6 +84,7 @@ function LoginPage() {
 				type="password"
 				size="medium"
 				placeholder="password"
+				autoComplete="current-password"
 				/>
 				</div>
 				<Button variant="primary" size="medium" type="submit">

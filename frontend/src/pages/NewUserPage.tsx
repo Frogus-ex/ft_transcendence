@@ -118,12 +118,13 @@ const NewUserPage = () => {
 						type="text"
 						size="medium"
 						placeholder="username"
+						autoComplete="username"
 						ref={userRef}
 						aria-invalid={validUser ? "false" : "true"}
 						onFocus={() => setUserFocus(true)}
 						onBlur={() => setUserFocus(false)}
 					/>
-					<p id="uidnote" className={username && !validUser ? "instructions" : "offscreen"}>
+					<p id="uidnote" className={userFocus && username && !validUser ? "instructions" : "offscreen"}>
                             Username must be at least three characters long<br />
                     </p>
 				</div>
@@ -136,12 +137,13 @@ const NewUserPage = () => {
 						type="email"
 						size="medium"
 						placeholder="email"
+						autoComplete="email"
 						ref={emailRef}
 						aria-invalid={validEmail ? "false" : "true"}
 						onFocus={() => setEmailFocus(true)}
 						onBlur={() => setEmailFocus(false)}
 					/>
-					<p id="uidnote" className={email && !validEmail ? "instructions" : "offscreen"}>
+					<p id="uidnote" className={emailFocus && email && !validEmail ? "instructions" : "offscreen"}>
                             Invalid Email<br />
                     </p>
 				</div>
@@ -154,11 +156,12 @@ const NewUserPage = () => {
 					type="password"
 					size="medium"
 					placeholder="password"
+					autoComplete="new-password"
 					aria-invalid={validPwd ? "false" : "true"}
 					onFocus={() => setPwdFocus(true)}
 					onBlur={() => setPwdFocus(false)}
 				/>
-				<p id="pwdnote" className={password && !validPwd ? "instructions" : "offscreen"}>
+				<p id="pwdnote" className={pwdFocus && !validPwd ? "instructions" : "offscreen"}>
 					8 to 24 characters.<br />
 					Must include:<br />
 						uppercase and lowercase letters, <br />
@@ -175,11 +178,12 @@ const NewUserPage = () => {
 					type="password"
 					size="medium"
 					placeholder="password"
+					autoComplete="new-password"
 					aria-invalid={validMatchPwd ? "false" : "true"}
 					onFocus={() => setMatchPwdFocus(true)}
 					onBlur={() => setMatchPwdFocus(false)}
 				/>
-				<p id="confirmnote" className={matchPassword && !validMatchPwd ? "instructions" : "offscreen"}>
+				<p id="confirmnote" className={matchPwdFocus && !validMatchPwd ? "instructions" : "offscreen"}>
 					Must match the first password input field.
 				</p>
 				</div>
