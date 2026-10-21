@@ -92,7 +92,7 @@ class PortfolioOut(BaseModel):
 			if isinstance(parsed, list):
 				return parsed
 			if isinstance(parsed, dict):
-				return [parsed]
+				return [parsed] if parsed else []
 			return []
 		return value
 

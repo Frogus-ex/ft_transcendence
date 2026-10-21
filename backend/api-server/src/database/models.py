@@ -43,8 +43,8 @@ class Portfolio(Base):
 
 	id: Mapped[int] = mapped_column(primary_key=True)
 	user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-	cash_balance: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, default=0)
-	positions: Mapped[dict] = mapped_column(String, nullable=False, default="{}")
+	cash_balance: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, default=100000)
+	positions: Mapped[dict] = mapped_column(String, nullable=False, default="[]")
 
 
 

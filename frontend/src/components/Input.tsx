@@ -10,6 +10,9 @@ type InputProps = {
   size: "small" | "medium" | "large";
   onFocus?: () => void;
   onBlur?: () => void;
+  min?: number | string;
+  step?: number | string;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   "aria-invalid"?: boolean | "true" | "false";
 };
 
