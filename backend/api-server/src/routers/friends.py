@@ -13,8 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from config import JWT_SECRET
-from database.models import Friendships, Messages, Users
+from database.models import Friendships, Messages, Order, Portfolio, Users
 from database.orm_db import get_async_session
+from routers.auth import PortfolioOut
 
 router = APIRouter(prefix="/api", tags=["friends"])
 ALGORITHM = "HS256"
@@ -139,11 +140,44 @@ async def get_friend_profile(
     return {"id": friend.id, "username": friend.username, "avatarUrl": friend.avatar_url}
 
 
+@router.get("/friends/{user_id}/portfolio", response_model=PortfolioOut)
+async def get_friend_portfolio(
+    user_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Users = Depends(get_current_user),
+):
+    if await ensure_friendship(db, current_user.id, user_id) is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view friends' portfolios.")
+
+    result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
+    portfolio = result.scalar_one_or_none()
+    if portfolio is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found.")
+
+    return portfolio
+
+
+@router.get("/friends/{user_id}/orders")
+async def get_friend_orders(
+    user_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Users = Depends(get_current_user),
+):
+    if await ensure_friendship(db, current_user.id, user_id) is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view friends' orders.")
+
+    result = await db.execute(
+        select(Order).where(Order.user_id == user_id).order_by(Order.created_at.desc()).limit(200)
+    )
+    return result.scalars().all()
+
+
 @router.get("/friends/requests")
 async def list_friend_requests(db: AsyncSession = Depends(get_async_session), current_user: Users = Depends(get_current_user)):
     rows = (
         await db.execute(
             select(Friendships).where(
+                Friendships.status.is_(False),
                 or_(
                     Friendships.user_low_id == current_user.id,
                     Friendships.user_high_id == current_user.id,

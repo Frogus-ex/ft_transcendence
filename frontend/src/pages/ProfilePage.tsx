@@ -63,7 +63,7 @@ function ProfilePageContent() {
           <div>
             <p className="text-white font-semibold text-lg">{user.username}</p>
             <Tooltip text="Online">
-              <Badge variant="online" size="medium" />{user.username}
+              <Badge variant="online" size="medium" />
             </Tooltip>
           </div>
         </div>

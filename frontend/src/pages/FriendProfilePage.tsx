@@ -142,13 +142,15 @@ function FriendProfilePageContent() {
 
 function FriendProfilePage() {
 	const { user, isLoading } = useAuth();
+	const { friendId } = useParams();
+	const friendUserId = friendId && /^\d+$/.test(friendId) ? Number(friendId) : undefined;
 
   if (isLoading) return <p className="p-6 text-gray-400">Loading...</p>;
   if (!user) return null;
 
   return (
     <MarketProvider>
-      <PortfolioProvider>
+      <PortfolioProvider userId={friendUserId}>
         <FriendProfilePageContent />
       </PortfolioProvider>
     </MarketProvider>
