@@ -4,14 +4,10 @@ import { useNavigate } from "react-router";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import Label from "../components/Label";
-import api from "../api/axios";
-import axios from "axios";
-import { useAuth } from "../hooks/useAuth";
-
-const LOGIN_URL = '/api/auth/login'
+import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
-	const {setAuth} = useAuth();
+	const { login } = useAuth();
 	const userRef = useRef<HTMLInputElement>(null);
 	const errRef = useRef<HTMLParagraphElement>(null);
 
@@ -30,34 +26,25 @@ function LoginPage() {
 	}, [email, pwd])
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		
-		try {
-			const response = await api.post(LOGIN_URL,
-				{ email, password: pwd},
-				{
-					headers: { 'Content-Type': 'application/json' },
-					withCredentials: true
-				});
-			const { token, user } = response.data;
-			setAuth({ id: user.id, username: user.username, avatarUrl: user.avatarUrl, accessToken: token});
-			setEmail('');
-			setPwd('');
-			setSuccess(true);
-			navigate("/profile");
-		} catch (err) {
-			if (axios.isAxiosError(err)) {
-			if (!err.response) {
-			setErrMsg("No Server Response");
-			} else if (err.response.status === 401) {
-			setErrMsg("Incorrect email or password");
-			} else {
-			setErrMsg("Login Failed");
-			}
-			errRef.current?.focus();
-			}
-		}
-	}
+  event.preventDefault();
+
+  try {
+    await login(email, pwd);
+    setEmail("");
+    setPwd("");
+    setSuccess(true);
+    navigate("/profile");
+  } catch (err) {
+    if (err instanceof TypeError) {
+      setErrMsg("No Server Response");
+    } else if (err instanceof Error && err.message.includes("401")) {
+      setErrMsg("Incorrect email or password");
+    } else {
+      setErrMsg("Login Failed");
+    }
+    errRef.current?.focus();
+  }
+};
 
   return (
     <section className="flex flex-col items-center justify-center min-h-screen p-5 gap-4 bg-gradient-to-br from-gray-950 via-gray-900 to-green-950">

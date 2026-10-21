@@ -335,6 +335,8 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_frontend
     restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: https://localhost:8443/api
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173 || exit 1"]
       interval: 10s

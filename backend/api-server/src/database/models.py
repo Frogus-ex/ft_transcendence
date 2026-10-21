@@ -44,6 +44,35 @@ class Portfolio(Base):
 	cash_balance: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False, default=0)
 	positions: Mapped[dict] = mapped_column(String, nullable=False, default="{}")
 
+
+
+
+class Order(Base):
+	__tablename__ = "orders"
+
+	id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+	symbol: Mapped[str] = mapped_column(String(20), nullable=False)
+	side: Mapped[str] = mapped_column(String(4), nullable=False)
+	quantity: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+	price: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+	realized_pnl: Mapped[Decimal | None] = mapped_column(Numeric(20, 8), nullable=True)
+	status: Mapped[str] = mapped_column(String(10), nullable=False, default="filled")
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+	__table_args__ = (
+		Index("idx_orders_user_created", "user_id", created_at.desc()),
+	)
+
+class ApiKey(Base):
+	__tablename__ = "api_keys"
+
+	id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+	key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+	key_prefix: Mapped[str] = mapped_column(String(12), nullable=False)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
 class Friendships(Base):
 	__tablename__ = "friends"
 	__table_args__ = (
@@ -67,5 +96,3 @@ class Messages(Base):
 	content: Mapped[str] = mapped_column(String(1000), nullable=False)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 	read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
-
-

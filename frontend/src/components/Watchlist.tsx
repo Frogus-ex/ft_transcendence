@@ -29,7 +29,7 @@ function Watchlist() {
         >
           <span>{asset.name}</span>
           <span className={asset.change24h >= 0 ? priceColors.up : priceColors.down}>
-            {asset.lastPrice.toLocaleString()}
+            {asset.lastPrice.toLocaleString("fr-FR")}
           </span>
         </button>
       ))}

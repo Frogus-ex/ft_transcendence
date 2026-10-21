@@ -3,6 +3,7 @@ import logging
 import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
@@ -15,10 +16,10 @@ from sqlalchemy import Table
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
-from routers import markets, websockets, auth, friends
+from routers import markets, websockets, auth, friends, orders, gdpr, keys
 from utils import manager, limiter
 from export import exporter
-from database.models import Users, Portfolio, Friendships, Messages
+from database.models import Users, Portfolio, Friendships, Messages, Order, ApiKey
 from database.orm_db import engine, Base
 
 
@@ -41,8 +42,11 @@ async def   lifespan(app: FastAPI):
                 cast(Table, Portfolio.__table__),
                 cast(Table, Friendships.__table__),
                 cast(Table, Messages.__table__),
-            ],
+            	cast(Table, Order.__table__),
+				cast(Table, ApiKey.__table__),
+			]
         )
+
     """Creating a connection pool and a client for Redis before starting FastAPI"""
 
     # Creating a connection pool for/from Redis (max 20 connections, editable)
@@ -108,10 +112,23 @@ async def   lifespan(app: FastAPI):
     await app.state.redis_client.aclose()
     await app.state.redis_pool.disconnect()
 
-app = FastAPI(title="Stock Market Data API", lifespan=lifespan)
+app = FastAPI(
+    title="Stock Market Data API",
+    lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 setup_monitoring(app)
 
@@ -130,3 +147,6 @@ app.include_router(websockets.router)
 app.include_router(exporter.router)
 app.include_router(auth.router)
 app.include_router(friends.router)
+app.include_router(orders.router)
+app.include_router(gdpr.router)
+app.include_router(keys.router)

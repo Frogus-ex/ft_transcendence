@@ -2,8 +2,11 @@ import { useState } from "react";
 import Button from "./Button";
 import Input from "./Input";
 import Label from "./Label";
+import Alert from "./Alert";
 import { useMarket } from "../context/MarketContext";
 import { usePortfolio } from "../context/PortfolioContext";
+import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api/client";
 
 type OrderSide = "buy" | "sell";
 type OrderType = "market" | "limit";
@@ -16,20 +19,11 @@ type OrderFormState = {
   takeProfit: string;
 };
 
-// Mock : le vrai prix viendra de MarketContext (Phase 3). Une seule constante
-// réutilisée en Zone 1 (affichage) et Zone 7 (calcul), pour ne pas avoir deux
-// valeurs qui pourraient un jour se désynchroniser.
-// const currentPrice = 64250.32;
-
-/**
- * OrderTicket — formulaire de passage d'ordre (Buy/Sell, Market/Limit, SL/TP).
- * Phase 2 : tout est en mock, form géré en local (Option A : un seul useState).
- */
 function OrderTicket() {
-
-  const {selectedSymbol, setSelectedSymbol, watchlist} = useMarket();
-  const selectAsset = watchlist.find((asset) => asset.symbol == selectedSymbol);
-  const {portfolio} = usePortfolio();
+  const { selectedSymbol, watchlist } = useMarket();
+  const selectAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
+  const { balance, refresh } = usePortfolio();
+  const { token } = useAuth();
   const [form, setForm] = useState<OrderFormState>({
     side: "buy",
     orderType: "market",
@@ -38,6 +32,9 @@ function OrderTicket() {
     stopLoss: "",
     takeProfit: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
 
   function handleSideChange(side: OrderSide) {
     setForm({ ...form, side });
@@ -54,21 +51,42 @@ function OrderTicket() {
     return true;
   }
 
-  function handleSubmit() {
-    if (!isFormValid()) return;
-    const order = {
-      id: `mock_${Date.now()}`,
-      symbol: selectedSymbol,
-      side: form.side,
-      type: form.orderType,
-      quantity: parseFloat(form.quantity),
-      limitPrice: form.orderType === "limit" ? parseFloat(form.limitPrice) : undefined,
-      stopLoss: form.stopLoss ? parseFloat(form.stopLoss) : undefined,
-      takeProfit: form.takeProfit ? parseFloat(form.takeProfit) : undefined,
-      status: "filled",
-      timestamp: new Date().toISOString(),
-    };
-    console.log("Mock order submitted:", order);
+  async function handleSubmit() {
+    if (!isFormValid() || !token) return;
+
+    if (form.orderType === "limit") {
+      setConfirmation(null);
+      setError("Les ordres Limit ne sont pas encore exécutés, seul Market fonctionne pour l'instant.");
+      return;
+    }
+
+    setError(null);
+    setConfirmation(null);
+    setIsSubmitting(true);
+    try {
+      const filledOrder = await apiFetch<{ price: number }>("/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          symbol: selectedSymbol,
+          side: form.side,
+          type: "market",
+          quantity: parseFloat(form.quantity),
+        }),
+      });
+      await refresh();
+      setConfirmation(
+        `${form.side === "buy" ? "Achat" : "Vente"} exécuté(e) : ${form.quantity} ${selectedSymbol} à $${Number(
+          filledOrder.price
+        ).toLocaleString()}`
+      );
+      setForm({ ...form, quantity: "" });
+      window.setTimeout(() => setConfirmation(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Échec de l'ordre.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const quantityNumber = parseFloat(form.quantity) || 0;
@@ -84,7 +102,7 @@ function OrderTicket() {
       <div className="flex items-baseline justify-between">
         <span className="text-gray-100 font-semibold">{selectAsset?.name}</span>
         <span className="text-green-400 font-semibold">
-          ${(selectAsset?.lastPrice ?? 0).toLocaleString()}
+            ${(selectAsset?.lastPrice ?? 0).toLocaleString("fr-FR")}
         </span>
       </div>
 
@@ -194,8 +212,12 @@ function OrderTicket() {
         </div>
         <div className="flex justify-between text-gray-400">
           <span>Solde disponible</span>
-            <span className="text-gray-100">${portfolio.balance.toLocaleString()}</span>        </div>
+          <span className="text-gray-100">${balance.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
       </div>
+
+      {confirmation && <Alert variant="success">{confirmation}</Alert>}
+      {error && <Alert variant="error">{error}</Alert>}
 
       {/* Zone 8 — Soumission */}
       <Button
@@ -204,9 +226,10 @@ function OrderTicket() {
         type="button"
         icon={false}
         shape="square"
+        disabled={isSubmitting || !token}
         onClick={handleSubmit}
       >
-        {form.side === "buy" ? `Buy ${selectedSymbol}` : `Sell ${selectedSymbol}`}
+        {isSubmitting ? "..." : form.side === "buy" ? `Buy ${selectedSymbol}` : `Sell ${selectedSymbol}`}
       </Button>
     </div>
   );

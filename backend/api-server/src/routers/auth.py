@@ -1,7 +1,7 @@
 import json
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
@@ -9,6 +9,8 @@ from datetime import timedelta, datetime, timezone
 from jose import jwt, JWTError
 from typing import Annotated
 from passlib.context import CryptContext
+from utils import limiter
+from auth_deps import get_current_user_id
 
 from starlette import status
 from sqlalchemy import select
@@ -47,6 +49,10 @@ class UserOut(BaseModel):
 class UserMeOut(UserOut):
 	email: str
 	createdAt: datetime = Field(validation_alias="created_at")
+
+class UpdateProfileRequest(BaseModel):
+	model_config = ConfigDict(str_strip_whitespace=True)
+	username: str = Field(min_length=3, max_length=50)
 
 class LoginResponse(BaseModel):
 	token: str
@@ -115,7 +121,8 @@ def create_access_token(email: str, id: int, expires_delta: timedelta):
 	return jwt.encode(encode, JWT_SECRET, algorithm=ALGORITHM)
 
 @router.post("/auth/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
-async def login(req: LoginRequest, db: db_dependency):
+@limiter.limit("5/minute")
+async def login(request: Request, req: LoginRequest, db: db_dependency):
 	user = await authenticate_user(req.email, req.password, db)
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
@@ -124,14 +131,9 @@ async def login(req: LoginRequest, db: db_dependency):
 
 # Request authorization header, 
 # Response { id, username, email, avatarUrl, createdAt }
+
 @router.get("/users/me", response_model=UserMeOut)
-async def profile(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)], db: db_dependency):
-	try:
-		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
-		user_id=int(payload["sub"])
-	except (JWTError, KeyError, ValueError):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
-	
+async def profile(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
 	result = await db.execute(select(Users).where(Users.id == user_id))
 	user = result.scalar_one_or_none()
 	if user is None:
@@ -139,14 +141,31 @@ async def profile(credentials: Annotated[HTTPAuthorizationCredentials, Depends(b
 	return user
 
 
-@router.get("/portfolio", response_model=PortfolioOut)
-async def get_portfolio(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)], db: db_dependency):
-	try:
-		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
-		user_id=int(payload["sub"])
-	except (JWTError, KeyError, ValueError):
+@router.put("/users/me", response_model=UserMeOut)
+@limiter.limit("10/minute")
+async def update_profile(
+	request: Request,
+	update: UpdateProfileRequest,
+	user_id: Annotated[int, Depends(get_current_user_id)],
+	db: db_dependency,
+):
+	result = await db.execute(select(Users).where(Users.id == user_id))
+	user = result.scalar_one_or_none()
+	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
-	
+
+	user.username = update.username
+	try:
+		await db.commit()
+	except IntegrityError:
+		await db.rollback()
+		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already in use")
+	await db.refresh(user)
+	return user
+
+
+@router.get("/portfolio", response_model=PortfolioOut)
+async def get_portfolio(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
 	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
 	portfolio = result.scalar_one_or_none()
 	if portfolio is None:

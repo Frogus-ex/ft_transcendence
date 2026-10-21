@@ -4,15 +4,12 @@ import { useNavigate } from "react-router";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import Label from "../components/Label";
-import api from "../api/axios"
-import axios from "axios"
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../context/AuthContext";
 
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%]).{8,24}$/;
 const USER_REGEX = /.{3,}$/
-const REGISTER_URL = '/api/auth/register'
 
 const NewUserPage = () => {
 
@@ -38,7 +35,7 @@ const NewUserPage = () => {
 
 	const [errMsg, setErrMsg] = useState('');
 
-	const { setAuth } = useAuth();
+	const { register, login } = useAuth();
 	const navigate = useNavigate();
 	
 	useEffect(() => {
@@ -64,59 +61,42 @@ const NewUserPage = () => {
     }, [email, password, matchPassword])
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-		const v1 = EMAIL_REGEX.test(email);
-		const v2 = PWD_REGEX.test(password);
-		const v3 = USER_REGEX.test(username);
-		if (!v1 || !v2 || !v3) {
-			setErrMsg( "Invalid Entry");
-			return;
-		}
-		// Try registering
-		try {
-			await api.post(REGISTER_URL,
-				{ email, password, username },
-				{
-					headers: { 'Content-Type': 'application/json' }
-				});
-			setErrMsg("Account created successfully. Logging you in...");
-		} catch (err) {
-			if (axios.isAxiosError(err)) {
-			if (!err.response) {
-			setErrMsg("No Server Response");
-			} else if (err.response.status === 409) {
-			setErrMsg("Already an account with this email");
-			} else {
-			setErrMsg("Registration Failed");
-			}
-			errRef.current?.focus();
-			}
-			return
-		}
-		// Try logging in
-		try {
-			const response = await api.post("/api/auth/login",
-			{ email, password },
-			{
-				headers: { 'Content-Type': 'application/json' },
-				withCredentials: true
-			});
+  event.preventDefault();
+  const v1 = EMAIL_REGEX.test(email);
+  const v2 = PWD_REGEX.test(password);
+  const v3 = USER_REGEX.test(username);
+  if (!v1 || !v2 || !v3) {
+    setErrMsg("Invalid Entry");
+    return;
+  }
 
-			const { token, user } = response.data;
-			setAuth({
-			id: user.id,
-			username: user.username,
-			avatarUrl: user.avatarUrl,
-			accessToken: token
-			});
-			navigate("/profile");
-		} catch (err) {
-			// Registration succeeded but auto-login failed — don't call it a
-			// registration failure, since the account WAS created
-			setErrMsg("Account created, but automatic login failed. Please log in.");
-			navigate("/login");
-		}
-	}
+  // Try registering
+  try {
+    await register(email, username, password);
+    setErrMsg("Account created successfully. Logging you in...");
+  } catch (err) {
+    if (err instanceof TypeError) {
+      setErrMsg("No Server Response");
+    } else if (err instanceof Error && err.message.includes("409")) {
+      setErrMsg("Already an account with this email");
+    } else {
+      setErrMsg("Registration Failed");
+    }
+    errRef.current?.focus();
+    return;
+  }
+
+  // Try logging in
+  try {
+    await login(email, password);
+    navigate("/profile");
+  } catch {
+    // Registration succeeded but auto-login failed — don't call it a
+    // registration failure, since the account WAS created
+    setErrMsg("Account created, but automatic login failed. Please log in.");
+    navigate("/login");
+  }
+};
 
   return (
     <section className="flex flex-col items-center justify-center min-h-screen p-5 gap-4 bg-gradient-to-br from-gray-950 via-gray-900 to-green-950">

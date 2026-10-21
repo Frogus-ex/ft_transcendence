@@ -6,8 +6,27 @@ import AnalyticsPanel from "../components/AnalyticsPanel";
 import ExportPanel from "../components/ExportPanel";
 import { MarketProvider } from "../context/MarketContext";
 import { PortfolioProvider } from "../context/PortfolioContext";
+import { useAuth } from "../context/AuthContext";
 
 function MarketsPage() {
+  const { user, isLoading } = useAuth();
+  const isAuthenticated = !isLoading && !!user;
+
+  if (!isAuthenticated) {
+    return (
+      <MarketProvider>
+        <div className="p-6 flex-1 grid grid-cols-[240px_1fr] gap-4">
+          <div>
+            <Watchlist />
+          </div>
+          <div className="h-full">
+            <PriceChart />
+          </div>
+        </div>
+      </MarketProvider>
+    );
+  }
+
   return (
     <MarketProvider>
       <PortfolioProvider>

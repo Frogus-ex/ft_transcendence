@@ -1,44 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import TimeframeSelector, { type Timeframe } from "./TimeframeSelector";
-import { generateMockCandles } from "../data/mockMarket";
+import DateRangeFilter from "./DateRangeFilter";
+import { apiFetch } from "../api/client";
+import { mapApiCandleToCandle, type ApiCandle, type Candle } from "../data/mockMarket";
 import { useMarket } from "../context/MarketContext";
+import { useMarketSocket } from "../hooks/useMarketSocket";
 
-
-const stepSecondsByTimeframe: Record<Timeframe, number> = {
-  "1m": 60,
-  "5m": 300,
-  "1h": 3600,
-  "1D": 86400,
-  "7D": 604800,
-};
-
-/**
- * PriceChart — graphique en chandelier (lightweight-charts) + timeframe.
- * Phase 2 : bougies générées en mock. Le vrai flux viendra de MarketContext
- * (WebSocket + GET /candles) en Phase 3.
- */
 function PriceChart() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const [timeframe, setTimeframe] = useState<Timeframe>("1h");
+  const lastCandleRef = useRef<Candle | null>(null);
+  const [timeframe, setTimeframe] = useState<Timeframe>("1m");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-  
-  //recuper selectedSymbol et watchlist depuis useMarket
-  const {selectedSymbol, setSelectedSymbol, watchlist} = useMarket();
-  //retrouver l'actif selectionne ds watchlist
-  const selectAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
+  const { selectedSymbol, watchlist } = useMarket();
+  const selectedAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
 
-  // Crée le graphique UNE SEULE FOIS, au montage du composant.
+  const isLiveRange = !startDate && !endDate;
+
   useEffect(() => {
     if (!containerRef.current) return;
 
     const chart = createChart(containerRef.current, {
       layout: { background: { color: "#050505" }, textColor: "#9ca3af" },
       grid: { vertLines: { color: "#1f1f1f" }, horzLines: { color: "#1f1f1f" } },
-      width: containerRef.current.clientWidth,
-      height: 300,
+      autoSize: true,
     });
 
     const series = chart.addCandlestickSeries({
@@ -57,18 +46,47 @@ function PriceChart() {
     };
   }, []);
 
-  // Régénère les bougies mock à chaque changement de timeframe.
   useEffect(() => {
-    if (!seriesRef.current || !selectAsset) return;
-    const candles = generateMockCandles(120, selectAsset.lastPrice, stepSecondsByTimeframe[timeframe]);
-    seriesRef.current.setData(candles);
-  }, [timeframe, selectedSymbol]);
+    if (!seriesRef.current || !selectedSymbol) return;
+
+    async function loadCandles() {
+      const params = new URLSearchParams({ interval: timeframe, limit: "120" });
+      if (startDate) params.set("start", startDate);
+      if (endDate) params.set("end", endDate);
+
+      const rawCandles = await apiFetch<ApiCandle[]>(
+        `/markets/${selectedSymbol}/candles?${params.toString()}`
+      );
+      const candles = rawCandles.map(mapApiCandleToCandle);
+      seriesRef.current!.setData(candles);
+      lastCandleRef.current = candles.length > 0 ? candles[candles.length - 1] : null;
+    }
+
+    loadCandles();
+  }, [timeframe, selectedSymbol, startDate, endDate]);
+
+  useMarketSocket(isLiveRange ? selectedSymbol : undefined, (tick) => {
+    if (!seriesRef.current || !lastCandleRef.current) return;
+    if (tick.symbol !== selectedSymbol) return;
+
+    const updated: Candle = {
+      ...lastCandleRef.current,
+      close: tick.price,
+      high: Math.max(lastCandleRef.current.high, tick.price),
+      low: Math.min(lastCandleRef.current.low, tick.price),
+    };
+    lastCandleRef.current = updated;
+    seriesRef.current.update(updated);
+  });
 
   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between">
-        <span className="text-gray-100 font-semibold">{selectAsset?.name}</span>
-        <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="text-gray-100 font-semibold">{selectedAsset?.name}</span>
+        <div className="flex items-center gap-3">
+          <DateRangeFilter start={startDate} end={endDate} onChangeStart={setStartDate} onChangeEnd={setEndDate} />
+          <TimeframeSelector value={timeframe} onChange={setTimeframe} />
+        </div>
       </div>
       <div ref={containerRef} className="flex-1" />
     </div>

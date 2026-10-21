@@ -3,184 +3,155 @@ import Card from "../components/Card";
 import Tooltip from "../components/Tooltip";
 import Avatar from "../components/Avatar";
 import Badge from "../components/Badge";
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router";
-import api from "../api/axios";
-import { useAuth } from "../hooks/useAuth";
+import ProfileEditForm from "../components/ProfileEditForm";
+import ApiKeyPanel from "../components/ApiKeyPanel";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
+import { MarketProvider } from "../context/MarketContext";
+import { PortfolioProvider, usePortfolio, type Order } from "../context/PortfolioContext";
 
-type UserMe = {
-	id: string;
-	username: string;
-	avatarUrl: string | null;
-	createdAt: string;
-};
+const dayLabels = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
-type Position = {
-	symbol: string;
-	quantity: number;
-	entryPrice: number;
-	currentValue: number;
-	unrealizedPnl: number;
-};
+function computeWeeklyPnL(orders: Order[]) {
+  const days: { day: string; amount: number }[] = [];
+  const now = new Date();
 
-type Portfolio = {
-	balance: number;
-	equity: number;
-	positions: Position[];
-};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
 
-const weeklyPnL = [
-  { day: "Mon", amount: 120.5 },
-  { day: "Tue", amount: -45.2 },
-  { day: "Wed", amount: 310.0 },
-  { day: "Thu", amount: -80.75 },
-  { day: "Fri", amount: 205.3 },
-  { day: "Sat", amount: 15.0 },
-  { day: "Sun", amount: -20.1 },
-];
+    const amount = orders
+      .filter((o) => o.realized_pnl !== null)
+      .filter((o) => {
+        const created = new Date(o.created_at);
+        return (
+          created.getFullYear() === d.getFullYear() &&
+          created.getMonth() === d.getMonth() &&
+          created.getDate() === d.getDate()
+        );
+      })
+      .reduce((sum, o) => sum + (o.realized_pnl ?? 0), 0);
 
-const positions = [
-  { symbol: "BTC", amount: "0.42", value: "$27,300" },
-  { symbol: "ETH", amount: "3.1", value: "$8,900" },
-  { symbol: "SOL", amount: "50", value: "$4,200" },
-];
+    days.push({ day: dayLabels[d.getDay()], amount });
+  }
+
+  return days;
+}
+
+function ProfilePageContent() {
+  const { user } = useAuth();
+  const { balance, positions, orders } = usePortfolio();
+
+  if (!user) return null;
+
+  const weeklyPnL = computeWeeklyPnL(orders);
+  const maxAbs = Math.max(1, ...weeklyPnL.map((d) => Math.abs(d.amount)));
+  const maxBarHeight = 128;
+
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-white mb-6">Profile</h1>
+      <Card padding="large" className="mb-6">
+        <div className="flex items-center gap-4">
+          <Avatar
+            src={user.avatarUrl ?? "https://i.pravatar.cc/150"}
+            alt="Profile photo"
+            size="large"
+          />
+          <div>
+            <p className="text-white font-semibold text-lg">{user.username}</p>
+            <Tooltip text="Online">
+              <Badge variant="online" size="medium" />{user.username}
+            </Tooltip>
+          </div>
+        </div>
+      </Card>
+	  <ProfileEditForm />
+	  <ApiKeyPanel />
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card padding="medium">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-400 text-sm">Wallet</span>
+            <Wallet size={18} className="text-gray-400" />
+          </div>
+          <p className="text-2xl font-bold text-white">
+            ${balance.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </Card>
+        <Card padding="medium">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-gray-400 text-sm">Positions</span>
+            <ListOrdered size={18} className="text-gray-400" />
+          </div>
+          <div className="flex flex-col gap-2">
+            {positions.length === 0 && (
+              <span className="text-gray-500 text-sm">Aucune position ouverte.</span>
+            )}
+            {positions.map((position) => (
+              <div key={position.symbol} className="flex justify-between text-sm">
+                <span className="text-white">{position.symbol}</span>
+                <span className="text-gray-400">{position.quantity}</span>
+                <span className="text-white">
+                  ${position.currentValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      <Card padding="large">
+        <span className="text-gray-400 text-sm mb-4 block">Weekly P&amp;L</span>
+        <div className="flex items-end justify-between gap-3 h-40">
+          {weeklyPnL.map((data, i) => {
+            const heightPx = (Math.abs(data.amount) / maxAbs) * maxBarHeight;
+            const isPositive = data.amount >= 0;
+            return (
+              <div key={`${data.day}-${i}`} className="flex-1 flex flex-col items-center gap-2">
+                <Tooltip text={`${isPositive ? "+" : ""}$${data.amount.toFixed(2)}`} className="w-full">
+                  <div className="w-full h-32 flex items-end">
+                    <div
+                      style={{ height: `${heightPx}px` }}
+                      className={"w-full rounded-t-md " + (isPositive ? "bg-green-500" : "bg-red-500")}
+                    />
+                  </div>
+                </Tooltip>
+                <span className="text-xs text-gray-400">{data.day}</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+	  <div className="mt-6">
+        <Link to="/gdpr" className="text-sm text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+          Gérer mes données (RGPD)
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 function ProfilePage() {
-	const { auth } = useAuth();
-	const maxAbs = Math.max(...weeklyPnL.map((d) => Math.abs(d.amount)));
-	const maxBarHeight = 128;
-	const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-	const [user, setUser] = useState<UserMe | null>(null);
-	const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState("");
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/login");
+    }
+  }, [isLoading, user, navigate]);
 
-	useEffect(() => {
-		// if (!auth?.accessToken) {
-		// 	navigate("/login");
-		// 	return;
-		// }
+  if (isLoading) return <p className="p-6 text-gray-400">Loading...</p>;
+  if (!user) return null;
 
-		//Controller that allows you to abort a Web request when desired
-		const controller = new AbortController();
-		const config = {
-			headers: { Authorization: `Bearer ${auth.accessToken}`},
-			signal: controller.signal,
-		};
-
-		(async () => {
-			try {
-				// Get the data from PostgreSQL database
-				// Promise is used to handle asynchronous operations
-				// Promise.all() only fulfills when every promise has been fulfilled correctly, and rejects all when one rejects
-				const [userRes, portfolioRes] = await Promise.all ([
-					api.get<UserMe>("/api/users/me", config),
-					api.get<PortfolioOut>("/api/portfolio", config),
-				]);
-				// const [userRes] = await Promise.all ([
-				// 	api.get<UserMe>("/api/users/me", config),
-				// ]);
-				setUser(userRes.data);
-				setPortfolio(portfolioRes.data);
-			} catch (error) {
-				if (controller.signal.aborted) return;
-				if (axios.isAxiosError(error) && error.response?.status === 401) {
-					navigate("/login");
-				} else {
-					setError("Could not load your profile.");
-				}
-			} finally {
-				if (!controller.signal.aborted) setLoading(false);
-			}
-		})();
-
-		return () => controller.abort();
-	}, [auth?.accessToken, navigate]);
-
-	if (error || !user || !portfolio) return <p className="p-6 text-red-500">{error}</p>
-	// if (error || !user) return <p className="p-6 text-red-500">{error}</p>
-
-	return (
-	<div className="p-6">
-		<h1 className="text-3xl font-bold text-white mb-6">Profile</h1>
-		<Card padding="large" className="mb-6">
-		<div className="flex items-center gap-4">
-			<Avatar
-			src="https://i.pravatar.cc/150"
-			alt="Profile photo"
-			size="large"
-			/>
-			<div>
-			<p className="text-white font-semibold text-lg">{user.username}</p>
-			<Tooltip text="Online">
-				<Badge variant="online" size="medium" />{user.username}
-			</Tooltip>
-			</div>
-		</div>
-		</Card>
-		<section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-		<Card padding="medium">
-			<div className="flex items-center justify-between mb-2">
-			<span className="text-gray-400 text-sm">Wallet</span>
-			<Wallet size={18} className="text-gray-400" />
-			</div>
-			<p className="text-2xl font-bold text-white">$45,231.89</p>
-		</Card>
-		<Card padding="medium">
-			<div className="flex items-center justify-between mb-3">
-			<span className="text-gray-400 text-sm">Positions</span>
-			<ListOrdered size={18} className="text-gray-400" />
-			</div>
-			<div className="flex flex-col gap-2">
-			{positions.map((position) => (
-				<div
-				key={position.symbol}
-				className="flex justify-between text-sm"
-				>
-				<span className="text-white">{position.symbol}</span>
-				<span className="text-gray-400">{position.amount}</span>
-				<span className="text-white">{position.value}</span>
-				</div>
-			))}
-			</div>
-		</Card>
-		</section>
-
-		<Card padding="large">
-		<span className="text-gray-400 text-sm mb-4 block">Weekly P&amp;L</span>
-		<div className="flex items-end justify-between gap-3 h-40">
-			{weeklyPnL.map((data) => {
-			const heightPx = (Math.abs(data.amount) / maxAbs) * maxBarHeight;
-			const isPositive = data.amount >= 0;
-			return (
-				<div
-				key={data.day}
-				className="flex-1 flex flex-col items-center gap-2"
-				>
-				<Tooltip
-					text={`${isPositive ? "+" : ""}$${data.amount.toFixed(2)}`}
-					className="w-full"
-				>
-					<div className="w-full h-32 flex items-end">
-					<div
-						style={{ height: `${heightPx}px` }}
-						className={
-						"w-full rounded-t-md " +
-						(isPositive ? "bg-green-500" : "bg-red-500")
-						}
-					/>
-					</div>
-				</Tooltip>
-				<span className="text-xs text-gray-400">{data.day}</span>
-				</div>
-			);
-			})}
-		</div>
-		</Card>
-	</div>
-	);
+  return (
+    <MarketProvider>
+      <PortfolioProvider>
+        <ProfilePageContent />
+      </PortfolioProvider>
+    </MarketProvider>
+  );
 }
 
 export default ProfilePage;
