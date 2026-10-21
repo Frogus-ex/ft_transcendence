@@ -79,16 +79,16 @@ function PriceChart() {
     seriesRef.current.update(updated);
   });
 
-  return (
+   return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-gray-100 font-semibold">{selectedAsset?.name}</span>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <DateRangeFilter start={startDate} end={endDate} onChangeStart={setStartDate} onChangeEnd={setEndDate} />
           <TimeframeSelector value={timeframe} onChange={setTimeframe} />
         </div>
       </div>
-      <div ref={containerRef} className="flex-1" />
+      <div ref={containerRef} className="flex-1 min-w-0 min-h-[280px] sm:min-h-[340px]" />
     </div>
   );
 }
