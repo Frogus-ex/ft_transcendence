@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { apiFetch } from "../api/client";
+import { apiFetch, refreshAccessToken } from "../api/client";
 
 export type User = {
   id: number;
@@ -40,11 +40,6 @@ function getTokenExpiryMs(token: string): number | null {
   }
 }
 
-function isTokenExpired(token: string): boolean {
-  const expiry = getTokenExpiryMs(token);
-  return expiry === null || expiry <= Date.now();
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -53,23 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function restoreSession() {
       const storedToken = localStorage.getItem("authToken");
-      if (!storedToken) {
-        setIsLoading(false);
-        return;
-      }
-
-      // An expired token would only produce a 401 in the console: drop it right away.
-      if (isTokenExpired(storedToken)) {
-        localStorage.removeItem("authToken");
-        setIsLoading(false);
-        return;
-      }
-
       try {
+        const sessionToken = storedToken ?? await refreshAccessToken();
         const me = await apiFetch<User>("/users/me", {
-          headers: { Authorization: `Bearer ${storedToken}` },
+          headers: { Authorization: `Bearer ${sessionToken}` },
         });
-        setToken(storedToken);
+        setToken(localStorage.getItem("authToken") ?? sessionToken);
         setUser(me);
       } catch {
         localStorage.removeItem("authToken");
@@ -80,17 +64,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restoreSession();
   }, []);
 
-  // End the session when the token expires instead of letting requests fail with 401.
+  // Refresh before access-token expiry so an active session continues seamlessly.
   useEffect(() => {
     if (!token) return;
     const expiry = getTokenExpiryMs(token);
     if (expiry === null) return;
 
-    const timeout = window.setTimeout(() => {
-      localStorage.removeItem("authToken");
-      setToken(null);
-      setUser(null);
-    }, Math.max(expiry - Date.now(), 0));
+    let timeout: number;
+    const refresh = async () => {
+      try {
+        setToken(await refreshAccessToken());
+      } catch (error: unknown) {
+        const remaining = expiry - Date.now();
+        if (remaining > 0) {
+          timeout = window.setTimeout(() => void refresh(), remaining + 1000);
+          return;
+        }
+        console.error("Unable to refresh authentication session.", error);
+        localStorage.removeItem("authToken");
+        setToken(null);
+        setUser(null);
+      }
+    };
+    timeout = window.setTimeout(() => void refresh(), Math.max(expiry - Date.now() - 60_000, 0));
 
     return () => window.clearTimeout(timeout);
   }, [token]);
@@ -153,6 +149,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("authToken");
     setToken(null);
     setUser(null);
+    void apiFetch<void>("/auth/logout", { method: "POST" }).catch((error: unknown) => {
+      console.error("Failed to clear the refresh-token cookie.", error);
+    });
   }
 
   return (

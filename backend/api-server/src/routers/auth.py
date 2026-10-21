@@ -2,7 +2,7 @@ import json
 import pyotp
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
@@ -61,6 +61,9 @@ class LoginResponse(BaseModel):
 	user: UserOut | None = None
 	requires2fa: bool = False
 	tempToken: str | None = None
+
+class RefreshResponse(BaseModel):
+	token: str
 
 class TwoFACode(BaseModel):
 	code: str = Field(pattern=r"^\d{6}$")
@@ -134,6 +137,18 @@ def create_access_token(email: str, id: int, expires_delta: timedelta, token_typ
 	encode = {"sub": str(id), "email": email, "type": token_type, "exp": datetime.now(timezone.utc) + expires_delta,}
 	return jwt.encode(encode, JWT_SECRET, algorithm=ALGORITHM)
 
+def set_refresh_cookie(response: Response, user: Users):
+	refresh_token = create_access_token(user.email, user.id, timedelta(days=7), token_type="refresh")
+	response.set_cookie(
+		key="refreshToken",
+		value=refresh_token,
+		max_age=7 * 24 * 60 * 60,
+		httponly=True,
+		secure=True,
+		samesite="lax",
+		path="/api/auth",
+	)
+
 async def _get_user_or_401(db: AsyncSession, user_id: int) -> Users:
 	user = await db.get(Users, user_id)
 	if user is None:
@@ -142,7 +157,7 @@ async def _get_user_or_401(db: AsyncSession, user_id: int) -> Users:
 
 @router.post("/auth/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 @limiter.limit("5/minute")
-async def login(request: Request, req: LoginRequest, db: db_dependency):
+async def login(request: Request, req: LoginRequest, response: Response, db: db_dependency):
 	user = await authenticate_user(req.email, req.password, db)
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
@@ -150,7 +165,31 @@ async def login(request: Request, req: LoginRequest, db: db_dependency):
 		temp_token = create_access_token(user.email, user.id, timedelta(minutes=5), token_type="2fa_pending")
 		return {"requires2fa": True, "tempToken": temp_token}
 	token = create_access_token(user.email, user.id, timedelta(minutes=20))
+	set_refresh_cookie(response, user)
 	return {"token": token, "user": user}
+
+@router.post("/auth/refresh", response_model=RefreshResponse)
+@limiter.limit("10/minute")
+async def refresh_access_token(request: Request, db: db_dependency):
+	refresh_token = request.cookies.get("refreshToken")
+	if not refresh_token:
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired, please log in again.")
+
+	try:
+		payload = jwt.decode(refresh_token, JWT_SECRET, algorithms=[ALGORITHM])
+		if payload.get("type") != "refresh":
+			raise ValueError("wrong token type")
+		user_id = int(payload["sub"])
+	except (JWTError, KeyError, TypeError, ValueError):
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired, please log in again.")
+
+	user = await _get_user_or_401(db, user_id)
+	token = create_access_token(user.email, user.id, timedelta(minutes=20))
+	return {"token": token}
+
+@router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+	response.delete_cookie(key="refreshToken", path="/api/auth", secure=True, httponly=True, samesite="lax")
 
 # Request authorization header, 
 # Response { id, username, email, avatarUrl, createdAt }
@@ -232,7 +271,7 @@ async def disable_2fa(request: Request, body: TwoFACode, user_id: Annotated[int,
 
 @router.post("/auth/2fa/verify", response_model=LoginResponse)
 @limiter.limit("5/minute")
-async def verify_2fa(request: Request, body: TwoFAVerifyRequest, db: db_dependency):
+async def verify_2fa(request: Request, body: TwoFAVerifyRequest, response: Response, db: db_dependency):
 	try:
 		payload = jwt.decode(body.tempToken, JWT_SECRET, algorithms=[ALGORITHM])
 		if payload.get("type") != "2fa_pending":
@@ -244,4 +283,5 @@ async def verify_2fa(request: Request, body: TwoFAVerifyRequest, db: db_dependen
 	if not user.two_fa_enabled or not pyotp.TOTP(user.totp_secret).verify(body.code, valid_window=1):
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid code.")
 	token = create_access_token(user.email, user.id, timedelta(minutes=20))
+	set_refresh_cookie(response, user)
 	return {"token": token, "user": user}
