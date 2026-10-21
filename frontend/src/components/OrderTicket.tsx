@@ -28,7 +28,7 @@ function blockInvalidKeys(event: React.KeyboardEvent<HTMLInputElement>) {
 function OrderTicket() {
   const { selectedSymbol, watchlist } = useMarket();
   const selectAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
-  const { balance, refresh } = usePortfolio();
+  const { balance, positions, refresh } = usePortfolio();
   const { token } = useAuth();
   const [form, setForm] = useState<OrderFormState>({
     side: "buy",
@@ -41,6 +41,8 @@ function OrderTicket() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  const heldQuantity = positions.find((position) => position.symbol === selectedSymbol)?.quantity ?? 0;
 
   function handleSideChange(side: OrderSide) {
     setForm({ ...form, side });
@@ -71,6 +73,7 @@ function OrderTicket() {
         ? parseFloat(form.limitPrice)
         : selectAsset?.lastPrice ?? 0;
     if (form.side === "buy" && quantityNumber * price > balance) return false;
+    if (form.side === "sell" && quantityNumber > heldQuantity) return false;
     return true;
   }
 
@@ -247,6 +250,11 @@ function OrderTicket() {
         </div>
         {form.side === "buy" && estimatedCost > balance && (
           <p className="text-red-400 text-sm">Solde insuffisant</p>
+        )}
+        {form.side === "sell" && quantityNumber > heldQuantity && (
+          <p className="text-red-400 text-sm">
+            Position insuffisante (vous détenez {heldQuantity} {selectedSymbol})
+          </p>
         )}
         <div className="flex justify-between text-gray-400">
           <span>Solde disponible</span>
