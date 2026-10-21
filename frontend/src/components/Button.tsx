@@ -31,7 +31,7 @@ function Button({
         " " +
         textColors.default +
         " " +
-        "group inline-flex items-center gap-1.5 " +
+        "group inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed " +
         (shape === "pill" ? "rounded-full" : "rounded-md")
       }
       onClick={onClick}

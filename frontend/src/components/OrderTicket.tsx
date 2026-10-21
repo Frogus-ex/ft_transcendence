@@ -18,6 +18,12 @@ type OrderFormState = {
   stopLoss: string;
   takeProfit: string;
 };
+type NumericField = "quantity" | "limitPrice" | "stopLoss" | "takeProfit";
+
+// Keys that make a number input accept signs or exponents: refused while typing.
+function blockInvalidKeys(event: React.KeyboardEvent<HTMLInputElement>) {
+  if (["-", "+", "e", "E"].includes(event.key)) event.preventDefault();
+}
 
 function OrderTicket() {
   const { selectedSymbol, watchlist } = useMarket();
@@ -44,10 +50,22 @@ function OrderTicket() {
     setForm({ ...form, orderType });
   }
 
+  // Refuses negative values, including pasted ones ("-8"), which the keyboard filter cannot see.
+  function handleNumberChange(field: NumericField) {
+    return (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      if (value.startsWith("-")) return;
+      setForm({ ...form, [field]: value });
+    };
+  }
+
   function isFormValid(): boolean {
     const quantityNumber = parseFloat(form.quantity);
-    if (!quantityNumber || quantityNumber <= 0) return false;
-    if (form.orderType === "limit" && !form.limitPrice) return false;
+    if (!Number.isFinite(quantityNumber) || quantityNumber <= 0) return false;
+    if (form.orderType === "limit") {
+      const limitPriceNumber = parseFloat(form.limitPrice);
+      if (!Number.isFinite(limitPriceNumber) || limitPriceNumber <= 0) return false;
+    }
     return true;
   }
 
@@ -161,8 +179,11 @@ function OrderTicket() {
           id="qty"
           type="number"
           size="medium"
+          min="0"
+          step="any"
           value={form.quantity}
-          onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+          onKeyDown={blockInvalidKeys}
+          onChange={handleNumberChange("quantity")}
         />
       </div>
 
@@ -174,8 +195,11 @@ function OrderTicket() {
             id="limitPrice"
             type="number"
             size="medium"
+            min="0"
+            step="any"
             value={form.limitPrice}
-            onChange={(e) => setForm({ ...form, limitPrice: e.target.value })}
+            onKeyDown={blockInvalidKeys}
+            onChange={handleNumberChange("limitPrice")}
           />
         </div>
       )}
@@ -188,8 +212,11 @@ function OrderTicket() {
             id="stopLoss"
             type="number"
             size="medium"
+            min="0"
+            step="any"
             value={form.stopLoss}
-            onChange={(e) => setForm({ ...form, stopLoss: e.target.value })}
+            onKeyDown={blockInvalidKeys}
+            onChange={handleNumberChange("stopLoss")}
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -198,8 +225,11 @@ function OrderTicket() {
             id="takeProfit"
             type="number"
             size="medium"
+            min="0"
+            step="any"
             value={form.takeProfit}
-            onChange={(e) => setForm({ ...form, takeProfit: e.target.value })}
+            onKeyDown={blockInvalidKeys}
+            onChange={handleNumberChange("takeProfit")}
           />
         </div>
       </div>
@@ -226,7 +256,7 @@ function OrderTicket() {
         type="button"
         icon={false}
         shape="square"
-        disabled={isSubmitting || !token}
+        disabled={isSubmitting || !token || !isFormValid()}
         onClick={handleSubmit}
       >
         {isSubmitting ? "..." : form.side === "buy" ? `Buy ${selectedSymbol}` : `Sell ${selectedSymbol}`}
