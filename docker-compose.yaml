@@ -163,8 +163,6 @@ services:
       context: ./backend/api-server
       dockerfile: Dockerfile
     container_name: transcendence_api_server
-    environment:
-      VITE_API_BASE_URL: /api      # au lieu de https://localhost:8443/api
     restart: unless-stopped
     env_file:
       - .env
@@ -174,6 +172,7 @@ services:
       POSTGRES_APP_USER: ${POSTGRES_APP_USER}
       POSTGRES_APP_PASSWORD_FILE: /run/secrets/postgres_app_password
       JWT_SECRET_FILE: /run/secrets/jwt_secret
+      VITE_API_BASE_URL: /api
 
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PORT: ${POSTGRES_PORT}
