@@ -31,6 +31,13 @@ if not POSTGRES_USER or not POSTGRES_DB or not DB_PASSWORD_ESCAPED:
         password_file={password_file_path_postgres}"
     )
 
+# Database URL for SQLAlchemy
+# URL-encode password to avoid parsing issues when it contains special chars
+DB_URL = (
+    f"postgresql+asyncpg://{POSTGRES_USER}:{DB_PASSWORD_ESCAPED}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+)
+
+
 JWT_SECRET_FILE = os.getenv("JWT_SECRET_FILE") or os.getenv("JWT_SECRET")
 JWT_SECRET = os.getenv("JWT_SECRET")
 
@@ -46,11 +53,31 @@ if not JWT_SECRET:
         "JWT secret is not configured. Set JWT_SECRET or JWT_SECRET_FILE to a non-empty value."
     )
 
-# Database URL for SQLAlchemy
-# URL-encode password to avoid parsing issues when it contains special chars
-DB_URL = (
-    f"postgresql+asyncpg://{POSTGRES_USER}:{DB_PASSWORD_ESCAPED}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-)
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+
+OAUTH_42_ID = os.getenv("OAUTH_42_ID")
+OAUTH_42_SECRET = os.getenv("OAUTH_42_SECRET")
+oauth_session_secret = os.getenv("OAUTH_SESSION_SECRET_FILE")
+
+if oauth_session_secret and os.path.exists(oauth_session_secret):
+    try:
+        with open(oauth_session_secret, "r", encoding="utf-8") as p:
+            OAUTH_SESSION = p.read().strip()
+    except OSError as exc:
+        logger.warning(f"Unable to read OAuth session file {oauth_session_secret}: {exc}")
+        OAUTH_SESSION = os.getenv("OAUTH_SESSION_SECRET")
+else:
+    OAUTH_SESSION = os.getenv("OAUTH_SESSION_SECRET")
+
+if not OAUTH_SESSION:
+    logger.warning(
+        "OAuth session is not setup, generate a new secret for it."
+    )
+
+OAUTH_SESSION_SECRET = quote_plus(OAUTH_SESSION)
+OAUTH_42_ID = quote_plus(OAUTH_42_ID)
+OAUTH_42_SECRET = quote_plus(OAUTH_42_SECRET)
+
 
 # Redis environment
 REDIS_HOST = os.getenv("REDIS_HOST")

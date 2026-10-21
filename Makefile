@@ -10,7 +10,10 @@ COLOUR_RED    = $(shell tput setaf 1 2>/dev/null)
 COLOUR_YELLOW = $(shell tput setaf 3 2>/dev/null)
 COLOUR_END    = $(shell tput sgr0 2>/dev/null)
 
-all: setup up
+pull:
+	$(COMPOSE) config 2>/dev/null | awk '/image:/ {print $$2}' | sort -u | xargs -P 8 -n 1 podman pull -q
+
+all: setup pull up
 
 setup:
 	if [ ! -f .env ]; then \
@@ -25,6 +28,7 @@ setup:
 	[ -f secrets/jwt_secret.txt ]                 || openssl rand -hex 32 | tr -d '\n' > secrets/jwt_secret.txt
 	[ -f secrets/grafana_admin_password.txt ]     || openssl rand -hex 24 | tr -d '\n' > secrets/grafana_admin_password.txt
 	[ -f secrets/postgres_app_password.txt ]      || openssl rand -hex 24 | tr -d '\n' > secrets/postgres_app_password.txt
+	[ -f secrets/oauth_session_secret.txt ]	      || openssl rand -hex 24 | tr -d '\n' > secrets/oauth_session_secret.txt
 	python3 -c "\
 	import json; \
 	pw = open('secrets/redis_password.txt').read().strip(); \
@@ -79,4 +83,4 @@ fixlog:
 ps:
 	$(COMPOSE) ps
 
-.PHONY: all setup up down fclean re logs ps fixlog
+.PHONY: all setup up down fclean re logs ps fixlog pull

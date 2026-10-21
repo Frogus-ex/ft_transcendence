@@ -5,10 +5,13 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from httpx import HTTPError
 from datetime import timedelta, datetime, timezone
 from jose import jwt, JWTError
-from typing import Annotated
+from typing import Annotated, TypeAlias
 from passlib.context import CryptContext
 from utils import limiter
 from auth_deps import get_current_user_id
@@ -19,27 +22,55 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import Users, Portfolio
 from database.orm_db import get_async_session
-from config import JWT_SECRET
+from config import JWT_SECRET, OAUTH_42_ID, OAUTH_42_SECRET, FRONTEND_URL
+
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
 ALGORITHM = 'HS256'
+MAX_PASSWORD_BYTES = 72
+DEFAULT_PFP = "https://i.pravatar.cc/150"
 
 #Password hashing
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+# False hash to let bcrypt work to avoid guessing which emails don't exist
+DUMMY_HASH = bcrypt_context.hash("dummy-password")
 bearer_scheme = HTTPBearer()
+
+
+oauth = OAuth()
+oauth.register(
+	name="school",
+	client_id= OAUTH_42_ID,
+	client_secret=OAUTH_42_SECRET,
+	authorize_url="https://api.intra.42.fr/oauth/authorize",
+	access_token_url="https://api.intra.42.fr/oauth/token",
+	api_base_url="https://api.intra.42.fr/",
+	client_kwargs={"scope": "public"},
+)
+
 
 class CreateUserRequest(BaseModel):
 	email: EmailStr
 	username: str = Field(min_length=3, max_length=50)
-	password: str = Field(min_length=8, max_length=72)
+	password: str = Field(min_length=8)
+
+	@field_validator("password")
+	@classmethod
+	def check_password_bcrypt(cls, value: str) -> str:
+		if len(value.encode("utf-8")) > MAX_PASSWORD_BYTES:
+			raise ValueError(f"Password must be at most {MAX_PASSWORD_BYTES} bytes.")
+		return value
+
 
 class RegisterResponse(BaseModel):
 	userId: int
 
+
 class LoginRequest(BaseModel):
 	email: EmailStr
 	password: str
+
 
 class UserOut(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
@@ -59,9 +90,11 @@ class UserMeOut(UserOut):
 	email: str
 	createdAt: datetime = Field(validation_alias="created_at")
 
+
 class UpdateProfileRequest(BaseModel):
 	model_config = ConfigDict(str_strip_whitespace=True)
 	username: str = Field(min_length=3, max_length=50)
+
 
 class LoginResponse(BaseModel):
 	token: str | None = None
@@ -75,12 +108,15 @@ class RefreshResponse(BaseModel):
 class TwoFACode(BaseModel):
 	code: str = Field(pattern=r"^\d{6}$")
 
+
 class TwoFAVerifyRequest(TwoFACode):
 	tempToken: str
+
 
 class TwoFASetupResponse(BaseModel):
 	otpauthUrl: str
 	secret: str
+
 
 class PortfolioOut(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
@@ -106,12 +142,28 @@ class PortfolioOut(BaseModel):
 			return []
 		return value
 
-db_dependency = Annotated[AsyncSession, Depends(get_async_session)]
+
+db_dependency: TypeAlias = Annotated[AsyncSession, Depends(get_async_session)]
+
+
+async def save_new_user(db: AsyncSession, user: Users) -> None:
+	db.add(user)
+	try:
+		await db.flush()
+		db.add(Portfolio(user_id=user.id))
+		await db.commit()
+	except IntegrityError as exc:
+		await db.rollback()
+		print(f"IntegrityError: {exc.orig}")
+		raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+		                    detail="Email or username already in use")
 
 
 # Register new user
 @router.post("/auth/register", status_code=status.HTTP_201_CREATED, response_model=RegisterResponse)
-async def register(db: db_dependency,
+@limiter.limit("10/hour")
+async def register(request: Request,
+                   db: db_dependency,
                    create_user_request: CreateUserRequest):
 	password_hash = await run_in_threadpool(bcrypt_context.hash, create_user_request.password)
 	user = Users(
@@ -120,25 +172,22 @@ async def register(db: db_dependency,
 		password_hash=password_hash,
 		avatar_url="/images/Default_pfp.jpg",
 	)
-	db.add(user)
-	try:
-		await db.flush()
-		db.add(Portfolio(user_id=user.id))
-		await db.commit()
-	except IntegrityError:
-		await db.rollback()
-		raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-		                    detail="Email or username already in use")
+	await save_new_user(db, user)
 	return {"userId": user.id}
+
 
 # Login to existing account
 async def authenticate_user(email: str, password:str, db):
+	if len(password.encode("utf-8")) > MAX_PASSWORD_BYTES:
+		return None
 	result = await db.execute(select(Users).where(Users.email == email.strip().lower()))
 	user = result.scalar_one_or_none()
-	if user is None:
+	if user is None or user.password_hash is None:
+		await run_in_threadpool(bcrypt_context.verify, password, DUMMY_HASH)
 		return None
 	ok = await run_in_threadpool(bcrypt_context.verify, password, user.password_hash)
 	return user if ok else None
+
 
 def create_access_token(email: str, id: int, expires_delta: timedelta, token_type: str = "access"):
 	encode = {"sub": str(id), "email": email, "type": token_type, "exp": datetime.now(timezone.utc) + expires_delta,}
@@ -161,6 +210,7 @@ async def _get_user_or_401(db: AsyncSession, user_id: int) -> Users:
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
 	return user
+
 
 @router.post("/auth/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 @limiter.limit("5/minute")
@@ -200,7 +250,6 @@ async def logout(response: Response):
 
 # Request authorization header, 
 # Response { id, username, email, avatarUrl, createdAt }
-
 @router.get("/users/me", response_model=UserMeOut)
 async def profile(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
 	result = await db.execute(select(Users).where(Users.id == user_id))
