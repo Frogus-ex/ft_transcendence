@@ -140,6 +140,16 @@ app.add_middleware(
 app.add_middleware(SessionMiddleware, secret_key=OAUTH_SESSION_SECRET)
 
 setup_monitoring(app)
+# Soft errors: the web app asks (X-Soft-Errors: 1) to receive handled client errors (4xx) as
+# HTTP 200 + X-Real-Status, so the browser console stays free of network errors the UI already
+# reports. Other clients (curl, API keys, Swagger) do not send the header and get the real status.
+@app.middleware("http")
+async def soft_errors(request: Request, call_next):
+    response = await call_next(request)
+    if request.headers.get("x-soft-errors") == "1" and 400 <= response.status_code < 500:
+        response.headers["X-Real-Status"] = str(response.status_code)
+        response.status_code = 200
+    return response
 
 # FastAPI global exception handler for SQLAlchemy errors
 @app.exception_handler(SQLAlchemyError)
