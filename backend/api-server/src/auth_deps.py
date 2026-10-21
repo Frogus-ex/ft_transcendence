@@ -26,6 +26,8 @@ def _user_id_from_token(credentials: Optional[HTTPAuthorizationCredentials]) -> 
 		return None
 	try:
 		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
+		if payload.get("type") != "access":
+			return None
 		return int(payload["sub"])
 	except (JWTError, KeyError, ValueError):
 		return None

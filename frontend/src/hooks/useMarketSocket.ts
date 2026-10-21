@@ -9,9 +9,8 @@ export type MarketTick = {
 
 const THROTTLE_MS = 250;
 
-// Ouvre un WebSocket vers /ws/markets/{symbol} et appelle onTick à chaque message,
-// throttlé à au plus 1 appel par THROTTLE_MS (garde toujours la dernière valeur reçue,
-// pour ne pas perdre le prix final même si plusieurs ticks arrivent entre deux appels).
+// Opens a WebSocket on /ws/markets/{symbol} and calls onTick for each message,
+// throttled to one call per THROTTLE_MS (the latest value is always delivered).
 export function useMarketSocket(symbol: string | undefined, onTick: (tick: MarketTick) => void) {
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
@@ -39,7 +38,6 @@ export function useMarketSocket(symbol: string | undefined, onTick: (tick: Marke
       try {
         data = JSON.parse(event.data) as MarketTick;
       } catch {
-        // message non-JSON ignoré
         return;
       }
 
@@ -55,7 +53,14 @@ export function useMarketSocket(symbol: string | undefined, onTick: (tick: Marke
 
     return () => {
       if (pendingTimeout) clearTimeout(pendingTimeout);
-      ws.close();
+      ws.onmessage = null;
+      // Closing a socket that is still connecting makes the browser log a warning,
+      // so wait for it to open before closing it.
+      if (ws.readyState === WebSocket.CONNECTING) {
+        ws.onopen = () => ws.close();
+      } else {
+        ws.close();
+      }
     };
   }, [symbol]);
 }

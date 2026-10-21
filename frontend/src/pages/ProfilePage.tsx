@@ -10,6 +10,7 @@ import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { MarketProvider } from "../context/MarketContext";
 import { PortfolioProvider, usePortfolio, type Order } from "../context/PortfolioContext";
+import TwoFactorSettings from "../components/TwoFactorSettings";
 
 const dayLabels = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -69,6 +70,7 @@ function ProfilePageContent() {
       </Card>
 	  <ProfileEditForm />
 	  <ApiKeyPanel />
+    <TwoFactorSettings />
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <Card padding="medium">
           <div className="flex items-center justify-between mb-2">

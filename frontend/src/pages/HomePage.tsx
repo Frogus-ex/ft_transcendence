@@ -1,8 +1,8 @@
 import {
   BarChart3,
+  KeyRound,
   ShieldCheck,
   TrendingUp,
-  Users,
   Zap,
 } from "lucide-react";
 import Button from "../components/Button";
@@ -27,8 +27,8 @@ function HomePage() {
             </h1>
             <p className="text-gray-400 text-lg mb-8">
               ft_transcendence is a real-time trading simulator that lets you
-              learn the financial markets, track your performance, and connect
-              with the community — without ever risking real money.
+              learn the financial markets and track your performance, without
+              ever risking real money.
             </p>
             {isLoggedIn ? (
               <Button
@@ -71,18 +71,18 @@ function HomePage() {
               Secure by Design
             </h3>
             <p className="text-gray-400">
-              Two-factor authentication and encrypted sessions keep your account
-              and your funds safe.{" "}
+              Hashed passwords, HTTPS and rate-limited endpoints keep your
+              account safe, and you can export or delete your data at any time.
             </p>
           </Card>
           <Card padding="large">
-            <Users size={32} className="text-green-500 mb-4" />
+            <KeyRound size={32} className="text-green-500 mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">
-              Social Trading
+              Open API
             </h3>
             <p className="text-gray-400">
-              Add friends, chat in real time, and compare your performance on
-              the leaderboard.
+              Generate an API key to read your portfolio and place orders from
+              your own scripts, with documented endpoints.
             </p>
           </Card>
           <Card padding="large">

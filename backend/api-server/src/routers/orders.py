@@ -79,7 +79,7 @@ async def place_order(
 			detail="Only market orders are supported for now.",
 		)
 
-	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
+	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id).with_for_update())
 	portfolio = result.scalar_one_or_none()
 	if portfolio is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found.")
