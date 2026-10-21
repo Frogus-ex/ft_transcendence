@@ -5,6 +5,7 @@ import Input from "../components/Input";
 import Button from "../components/Button";
 import Label from "../components/Label";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api/client";
 
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -70,6 +71,26 @@ const NewUserPage = () => {
     return;
   }
 
+  // Ask the server first so that a taken email/username is reported without a 409 in the console
+  try {
+    const params = new URLSearchParams({ email, username });
+    const availability = await apiFetch<{ emailAvailable: boolean; usernameAvailable: boolean }>(
+      `/auth/availability?${params.toString()}`
+    );
+    if (!availability.emailAvailable) {
+      setErrMsg("Already an account with this email");
+      errRef.current?.focus();
+      return;
+    }
+    if (!availability.usernameAvailable) {
+      setErrMsg("This username is already taken");
+      errRef.current?.focus();
+      return;
+    }
+  } catch {
+    // The check is only a convenience: if it fails, the registration below reports any real error.
+  }
+
   // Try registering
   try {
     await register(email, username, password);
@@ -78,7 +99,7 @@ const NewUserPage = () => {
     if (err instanceof TypeError) {
       setErrMsg("No Server Response");
     } else if (err instanceof Error && err.message.includes("409")) {
-      setErrMsg("Already an account with this email");
+      setErrMsg("Email or username already in use");
     } else {
       setErrMsg("Registration Failed");
     }
