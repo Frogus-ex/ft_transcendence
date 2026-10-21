@@ -19,9 +19,9 @@ function HomePage() {
   return (
     <main className="flex-1 flex flex-col">
       <div className="flex-1">
-        <section className="flex items-center justify-between px-12 py-20 gap-12">
+        <section className="flex flex-col md:flex-row items-center justify-between px-6 md:px-12 py-12 md:py-20 gap-8 md:gap-12">
           <div className="max-w-xl">
-            <h1 className="text-5xl font-bold text-white mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               <span className="block">Trade in real time,</span>
               <span className="block">risk-free.</span>
             </h1>
@@ -50,11 +50,11 @@ function HomePage() {
               </Button>
             )}
           </div>
-          <div className="flex-shrink-0">
+          <div className="hidden md:block flex-shrink-0">
             <TrendingUp size={220} className="text-green-500 opacity-80" />
           </div>
         </section>
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 px-12 py-16">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 px-6 md:px-12 py-10 md:py-16">
           <Card padding="large">
             <Zap size={32} className="text-green-500 mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">

@@ -2,7 +2,7 @@ import json
 import pyotp
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import RedirectResponse
@@ -175,6 +175,25 @@ async def register(request: Request,
 	await save_new_user(db, user)
 	return {"userId": user.id}
 
+class AvailabilityResponse(BaseModel):
+	emailAvailable: bool
+	usernameAvailable: bool
+
+
+# Lets the sign-up form know whether an email / username is free before registering,
+# so a taken value is reported without a 409. Rate limited to make enumeration impractical.
+@router.get("/auth/availability", response_model=AvailabilityResponse)
+@limiter.limit("20/hour")
+async def check_availability(request: Request,
+                             db: db_dependency,
+                             email: str = Query(min_length=3, max_length=255),
+                             username: str = Query(min_length=1, max_length=50)):
+	email_taken = await db.execute(select(Users.id).where(Users.email == email.strip().lower()))
+	username_taken = await db.execute(select(Users.id).where(Users.username == username.strip()))
+	return {
+		"emailAvailable": email_taken.scalar_one_or_none() is None,
+		"usernameAvailable": username_taken.scalar_one_or_none() is None,
+	}
 
 # Login to existing account
 async def authenticate_user(email: str, password:str, db):

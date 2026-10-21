@@ -7,6 +7,12 @@ import { mapApiCandleToCandle, type ApiCandle, type Candle } from "../data/mockM
 import { useMarket } from "../context/MarketContext";
 import { useMarketSocket } from "../hooks/useMarketSocket";
 
+// Chrome sends intermediate values while the year is being typed (0002-.., 20201-..):
+// only complete dates from 2000 onwards are sent to the API.
+const DATE_RE = /^20\d{2}-\d{2}-\d{2}$/;
+const validDate = (value: string) =>
+  DATE_RE.test(value) && !Number.isNaN(Date.parse(value)) ? value : "";
+
 function PriceChart() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -15,11 +21,14 @@ function PriceChart() {
   const [timeframe, setTimeframe] = useState<Timeframe>("1m");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const { selectedSymbol, watchlist } = useMarket();
   const selectedAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
 
-  const isLiveRange = !startDate && !endDate;
+  const start = validDate(startDate);
+  const end = validDate(endDate);
+  const isLiveRange = !start && !end;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -48,22 +57,28 @@ function PriceChart() {
 
   useEffect(() => {
     if (!seriesRef.current || !selectedSymbol) return;
+    if (start && end && start > end) return;
 
     async function loadCandles() {
       const params = new URLSearchParams({ interval: timeframe, limit: "120" });
-      if (startDate) params.set("start", startDate);
-      if (endDate) params.set("end", endDate);
+      if (start) params.set("start", start);
+      if (end) params.set("end", end);
 
-      const rawCandles = await apiFetch<ApiCandle[]>(
-        `/markets/${selectedSymbol}/candles?${params.toString()}`
-      );
-      const candles = rawCandles.map(mapApiCandleToCandle);
-      seriesRef.current!.setData(candles);
-      lastCandleRef.current = candles.length > 0 ? candles[candles.length - 1] : null;
+      try {
+        const rawCandles = await apiFetch<ApiCandle[]>(
+          `/markets/${selectedSymbol}/candles?${params.toString()}`
+        );
+        const candles = rawCandles.map(mapApiCandleToCandle);
+        seriesRef.current!.setData(candles);
+        lastCandleRef.current = candles.length > 0 ? candles[candles.length - 1] : null;
+        setLoadError(null);
+      } catch {
+        setLoadError("Impossible de charger les bougies.");
+      }
     }
 
     loadCandles();
-  }, [timeframe, selectedSymbol, startDate, endDate]);
+  }, [timeframe, selectedSymbol, start, end]);
 
   useMarketSocket(isLiveRange ? selectedSymbol : undefined, (tick) => {
     if (!seriesRef.current || !lastCandleRef.current) return;
@@ -79,7 +94,7 @@ function PriceChart() {
     seriesRef.current.update(updated);
   });
 
-   return (
+  return (
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-3 h-full">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-gray-100 font-semibold">{selectedAsset?.name}</span>
@@ -89,6 +104,7 @@ function PriceChart() {
         </div>
       </div>
       <div ref={containerRef} className="flex-1 min-w-0 min-h-[280px] sm:min-h-[340px]" />
+      {loadError && <p className="text-red-400 text-sm">{loadError}</p>}
     </div>
   );
 }

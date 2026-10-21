@@ -28,7 +28,7 @@ function blockInvalidKeys(event: React.KeyboardEvent<HTMLInputElement>) {
 function OrderTicket() {
   const { selectedSymbol, watchlist } = useMarket();
   const selectAsset = watchlist.find((asset) => asset.symbol === selectedSymbol);
-  const { balance, refresh } = usePortfolio();
+  const { balance, positions, refresh } = usePortfolio();
   const { token } = useAuth();
   const [form, setForm] = useState<OrderFormState>({
     side: "buy",
@@ -41,6 +41,8 @@ function OrderTicket() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  const heldQuantity = positions.find((position) => position.symbol === selectedSymbol)?.quantity ?? 0;
 
   function handleSideChange(side: OrderSide) {
     setForm({ ...form, side });
@@ -66,6 +68,12 @@ function OrderTicket() {
       const limitPriceNumber = parseFloat(form.limitPrice);
       if (!Number.isFinite(limitPriceNumber) || limitPriceNumber <= 0) return false;
     }
+    const price =
+      form.orderType === "limit" && form.limitPrice
+        ? parseFloat(form.limitPrice)
+        : selectAsset?.lastPrice ?? 0;
+    if (form.side === "buy" && quantityNumber * price > balance) return false;
+    if (form.side === "sell" && quantityNumber > heldQuantity) return false;
     return true;
   }
 
@@ -240,6 +248,14 @@ function OrderTicket() {
           <span>Coût estimé</span>
           <span className="text-gray-100">${estimatedCost.toFixed(2)}</span>
         </div>
+        {form.side === "buy" && estimatedCost > balance && (
+          <p className="text-red-400 text-sm">Solde insuffisant</p>
+        )}
+        {form.side === "sell" && quantityNumber > heldQuantity && (
+          <p className="text-red-400 text-sm">
+            Position insuffisante (vous détenez {heldQuantity} {selectedSymbol})
+          </p>
+        )}
         <div className="flex justify-between text-gray-400">
           <span>Solde disponible</span>
           <span className="text-gray-100">${balance.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>

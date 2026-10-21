@@ -5,6 +5,7 @@ import Input from "../components/Input";
 import Button from "../components/Button";
 import Label from "../components/Label";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api/client";
 
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -70,6 +71,26 @@ const NewUserPage = () => {
     return;
   }
 
+  // Ask the server first so that a taken email/username is reported without a 409 in the console
+  try {
+    const params = new URLSearchParams({ email, username });
+    const availability = await apiFetch<{ emailAvailable: boolean; usernameAvailable: boolean }>(
+      `/auth/availability?${params.toString()}`
+    );
+    if (!availability.emailAvailable) {
+      setErrMsg("Already an account with this email");
+      errRef.current?.focus();
+      return;
+    }
+    if (!availability.usernameAvailable) {
+      setErrMsg("This username is already taken");
+      errRef.current?.focus();
+      return;
+    }
+  } catch {
+    // The check is only a convenience: if it fails, the registration below reports any real error.
+  }
+
   // Try registering
   try {
     await register(email, username, password);
@@ -78,7 +99,7 @@ const NewUserPage = () => {
     if (err instanceof TypeError) {
       setErrMsg("No Server Response");
     } else if (err instanceof Error && err.message.includes("409")) {
-      setErrMsg("Already an account with this email");
+      setErrMsg("Email or username already in use");
     } else {
       setErrMsg("Registration Failed");
     }
@@ -118,12 +139,13 @@ const NewUserPage = () => {
 						type="text"
 						size="medium"
 						placeholder="username"
+						autoComplete="username"
 						ref={userRef}
 						aria-invalid={validUser ? "false" : "true"}
 						onFocus={() => setUserFocus(true)}
 						onBlur={() => setUserFocus(false)}
 					/>
-					<p id="uidnote" className={username && !validUser ? "instructions" : "offscreen"}>
+					<p id="uidnote" className={userFocus && username && !validUser ? "instructions" : "offscreen"}>
                             Username must be at least three characters long<br />
                     </p>
 				</div>
@@ -136,12 +158,13 @@ const NewUserPage = () => {
 						type="email"
 						size="medium"
 						placeholder="email"
+						autoComplete="email"
 						ref={emailRef}
 						aria-invalid={validEmail ? "false" : "true"}
 						onFocus={() => setEmailFocus(true)}
 						onBlur={() => setEmailFocus(false)}
 					/>
-					<p id="uidnote" className={email && !validEmail ? "instructions" : "offscreen"}>
+					<p id="uidnote" className={emailFocus && email && !validEmail ? "instructions" : "offscreen"}>
                             Invalid Email<br />
                     </p>
 				</div>
@@ -154,11 +177,12 @@ const NewUserPage = () => {
 					type="password"
 					size="medium"
 					placeholder="password"
+					autoComplete="new-password"
 					aria-invalid={validPwd ? "false" : "true"}
 					onFocus={() => setPwdFocus(true)}
 					onBlur={() => setPwdFocus(false)}
 				/>
-				<p id="pwdnote" className={password && !validPwd ? "instructions" : "offscreen"}>
+				<p id="pwdnote" className={pwdFocus && !validPwd ? "instructions" : "offscreen"}>
 					8 to 24 characters.<br />
 					Must include:<br />
 						uppercase and lowercase letters, <br />
@@ -175,11 +199,12 @@ const NewUserPage = () => {
 					type="password"
 					size="medium"
 					placeholder="password"
+					autoComplete="new-password"
 					aria-invalid={validMatchPwd ? "false" : "true"}
 					onFocus={() => setMatchPwdFocus(true)}
 					onBlur={() => setMatchPwdFocus(false)}
 				/>
-				<p id="confirmnote" className={matchPassword && !validMatchPwd ? "instructions" : "offscreen"}>
+				<p id="confirmnote" className={matchPwdFocus && !validMatchPwd ? "instructions" : "offscreen"}>
 					Must match the first password input field.
 				</p>
 				</div>
