@@ -29,6 +29,9 @@ type AuthContextValue = {
   updateProfile: (username: string) => Promise<void>;
 };
 
+// Must match the lifetime of the refresh cookie set by the API (7 days).
+const REFRESH_COOKIE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function getTokenExpiryMs(token: string): number | null {
@@ -48,13 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function restoreSession() {
       const storedToken = localStorage.getItem("authToken");
-      // No token and no past session: nothing to restore, so no refresh request (avoids a 401 in the console).
-      if (!storedToken && !localStorage.getItem("hasSession")) {
+      const tokenExpiry = storedToken ? getTokenExpiryMs(storedToken) : null;
+      // A stored token that is still valid for a few seconds can be used as is.
+      const tokenUsable = storedToken !== null && tokenExpiry !== null && tokenExpiry > Date.now() + 5_000;
+      // The refresh cookie is httpOnly, so we remember when it expires (7 days after login).
+      const canRefresh = Number(localStorage.getItem("hasSession")) > Date.now();
+
+      // Nothing usable: do not call the API at all (no 401 in the console).
+      if (!tokenUsable && !canRefresh) {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("hasSession");
         setIsLoading(false);
         return;
       }
       try {
-        const sessionToken = storedToken ?? await refreshAccessToken();
+        const sessionToken = tokenUsable ? storedToken : await refreshAccessToken();
         const me = await apiFetch<User>("/users/me", {
           headers: { Authorization: `Bearer ${sessionToken}` },
         });
@@ -101,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Saves the session: used by the normal login AND by the 2FA verification
   function saveSession(newToken: string, newUser: User) {
     localStorage.setItem("authToken", newToken);
-    localStorage.setItem("hasSession", "1");
+    localStorage.setItem("hasSession", String(Date.now() + REFRESH_COOKIE_TTL_MS));
     setToken(newToken);
     setUser(newUser);
   }
