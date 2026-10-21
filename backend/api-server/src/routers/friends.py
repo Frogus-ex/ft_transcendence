@@ -398,7 +398,7 @@ def build_search_query(me: int, term: str, limit: int) -> Select:
 	)
 	friendship_status = case(
 		(Friendships.id.is_(None), "none"),
-		(Friendships.status == "accepted", "friends"),
+		(Friendships.status.is_(True), "friends"),
 		(Friendships.requester_id == me, "request_sent"),
 		else_="request_received",
 	).label("friendship_status")

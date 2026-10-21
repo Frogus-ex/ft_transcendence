@@ -3,7 +3,7 @@ import Card from "../components/Card";
 import Badge from "../components/Badge";
 import Input from "../components/Input";
 import api from "../api/axios"
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../context/AuthContext";
 
 type FriendshipStatus = "none" | "friends" | "request_sent" | "request_received";
 
@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<FriendshipStatus, string> = {
 
 
 function ContactsPage() {
-	const { auth } = useAuth();
+	const { user, token } = useAuth();
 
 	const [search, setSearch] = useState("");
 	const [friends, setFriends] = useState<SearchUser[]>([]);
@@ -35,6 +35,8 @@ function ContactsPage() {
 	const [error, setError] = useState("");
 
 	const term = search.trim();
+
+	if (!user) return null;
 
 	// const matchingFriends = useMemo(() => {
 	// 	const query = term.toLowerCase();
@@ -46,8 +48,9 @@ function ContactsPage() {
 	// }, [term]);
 
 	useEffect(() => {
-		if (term.length < MIN_SEARCH || !auth?.accessToken) {
+		if (!token || term.length < MIN_SEARCH) {
 			setUsers([]);
+			setError("");
 			return;
 		}
 
@@ -58,7 +61,7 @@ function ContactsPage() {
 			try {
 				const res = await api.get<{ users: SearchUser[] }>("/api/users", {
 					params: { search: term, limit: 10 },
-					headers: { Authorization: `Bearer ${auth.accessToken}` },
+					headers: { Authorization: `Bearer ${token}` },
 					signal: controller.signal,
 				});
 				setUsers(res.data.users);
@@ -75,8 +78,8 @@ function ContactsPage() {
 		return () => {
 			clearTimeout(timer);
 			controller.abort();
-		}
-	}, [term, auth?.accessToken]);
+		};
+	}, [term, token]);
 
 	return (
 	<div className="p-6">
