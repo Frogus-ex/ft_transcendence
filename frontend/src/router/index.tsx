@@ -4,6 +4,7 @@ import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import MarketsPage from "../pages/MarketsPage";
 import ContactsPage from "../pages/ContactsPage";
+import FriendProfilePage from "../pages/FriendProfilePage";
 import ProfilePage from "../pages/ProfilePage";
 import NewUserPage from "../pages/NewUserPage";
 import GdprPage from "../pages/GdprPage";
@@ -25,6 +26,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute>
             <ContactsPage />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "contacts/:friendId",
+        element: (
+          <PrivateRoute>
+            <FriendProfilePage />
           </PrivateRoute>
         ),
       },
