@@ -163,6 +163,8 @@ services:
       context: ./backend/api-server
       dockerfile: Dockerfile
     container_name: transcendence_api_server
+    environment:
+      VITE_API_BASE_URL: /api      # au lieu de https://localhost:8443/api
     restart: unless-stopped
     env_file:
       - .env
