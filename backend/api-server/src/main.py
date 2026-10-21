@@ -16,10 +16,10 @@ from sqlalchemy import Table
 
 from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
-from routers import markets, websockets, auth, orders, gdpr, keys
+from routers import markets, websockets, auth, friends, orders, gdpr, keys
 from utils import manager, limiter
+from database.models import Users, Portfolio, Friendships, Messages, Order, ApiKey
 from export import exporter, importer
-from database.models import Users, Portfolio, Order, ApiKey
 from database.orm_db import engine, Base
 
 
@@ -37,8 +37,16 @@ async def   lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(
             Base.metadata.create_all,
-            tables=[cast(Table, Users.__table__), cast(Table, Portfolio.__table__), cast(Table, Order.__table__), cast(Table, ApiKey.__table__)],
-		)
+            tables=[
+                cast(Table, Users.__table__),
+                cast(Table, Portfolio.__table__),
+                cast(Table, Friendships.__table__),
+                cast(Table, Messages.__table__),
+            	cast(Table, Order.__table__),
+				cast(Table, ApiKey.__table__),
+			]
+        )
+
     """Creating a connection pool and a client for Redis before starting FastAPI"""
 
     # Creating a connection pool for/from Redis (max 20 connections, editable)
@@ -138,6 +146,7 @@ app.include_router(markets.router)
 app.include_router(websockets.router)
 app.include_router(exporter.router)
 app.include_router(auth.router)
+app.include_router(friends.router)
 app.include_router(orders.router)
 app.include_router(gdpr.router)
 app.include_router(keys.router)
