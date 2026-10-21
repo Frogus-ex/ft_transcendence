@@ -10,7 +10,10 @@ COLOUR_RED    = $(shell tput setaf 1 2>/dev/null)
 COLOUR_YELLOW = $(shell tput setaf 3 2>/dev/null)
 COLOUR_END    = $(shell tput sgr0 2>/dev/null)
 
-all: setup up
+pull:
+	$(COMPOSE) config 2>/dev/null | awk '/image:/ {print $$2}' | sort -u | xargs -P 8 -n 1 podman pull -q
+
+all: setup pull up
 
 setup:
 	if [ ! -f .env ]; then \
@@ -79,4 +82,4 @@ fixlog:
 ps:
 	$(COMPOSE) ps
 
-.PHONY: all setup up down fclean re logs ps fixlog
+.PHONY: all setup up down fclean re logs ps fixlog pull
