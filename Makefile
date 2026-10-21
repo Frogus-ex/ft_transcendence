@@ -25,6 +25,7 @@ setup:
 	[ -f secrets/jwt_secret.txt ]                 || openssl rand -hex 32 | tr -d '\n' > secrets/jwt_secret.txt
 	[ -f secrets/grafana_admin_password.txt ]     || openssl rand -hex 24 | tr -d '\n' > secrets/grafana_admin_password.txt
 	[ -f secrets/postgres_app_password.txt ]      || openssl rand -hex 24 | tr -d '\n' > secrets/postgres_app_password.txt
+	[ -f secrets/oauth_session_secret.txt ]	      || openssl rand -hex 24 | tr -d '\n' > secrets/oauth_session_secret.txt
 	python3 -c "\
 	import json; \
 	pw = open('secrets/redis_password.txt').read().strip(); \

@@ -13,8 +13,9 @@ from slowapi.middleware import SlowAPIMiddleware
 from utils.monitoring import setup_monitoring
 from typing import cast
 from sqlalchemy import Table
+from starlette.middleware.sessions import SessionMiddleware
 
-from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
+from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD, OAUTH_SESSION_SECRET
 from urllib.parse import quote_plus
 from routers import markets, websockets, auth, orders, gdpr
 from utils import manager, limiter
@@ -115,6 +116,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SessionMiddleware, secret_key=OAUTH_SESSION_SECRET)
 
 setup_monitoring(app)
 
