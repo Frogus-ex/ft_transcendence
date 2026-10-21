@@ -5,18 +5,25 @@ export type User = {
   id: number;
   username: string;
   avatarUrl: string | null;
+  twoFactorEnabled: boolean;
 };
 
 type LoginResponse = {
-  token: string;
-  user: User;
+  token: string | null;
+  user: User | null;
+  requires2fa: boolean;
+  tempToken: string | null;
 };
+
+export type LoginResult = { requires2fa: true; tempToken: string } | undefined;
 
 type AuthContextValue = {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  verify2fa: (tempToken: string, code: string) => Promise<void>;
+  setTwoFactorEnabled: (enabled: boolean) => void;
   register: (email: string, username: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (username: string) => Promise<void>;
@@ -88,15 +95,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timeout);
   }, [token]);
 
-  async function login(email: string, password: string) {
+  // Saves the session: used by the normal login AND by the 2FA verification
+  function saveSession(newToken: string, newUser: User) {
+    localStorage.setItem("authToken", newToken);
+    setToken(newToken);
+    setUser(newUser);
+  }
+
+  async function login(email: string, password: string): Promise<LoginResult> {
     const result = await apiFetch<LoginResponse>("/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    localStorage.setItem("authToken", result.token);
-    setToken(result.token);
-    setUser(result.user);
+    // 2FA enabled: no real token yet, hand the temporary token back to the page
+    if (result.requires2fa && result.tempToken) {
+      return { requires2fa: true, tempToken: result.tempToken };
+    }
+    if (!result.token || !result.user) throw new Error("Login Failed");
+    saveSession(result.token, result.user);
+  }
+
+  async function verify2fa(tempToken: string, code: string) {
+    const result = await apiFetch<LoginResponse>("/auth/2fa/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tempToken, code }),
+    });
+    if (!result.token || !result.user) throw new Error("Verification Failed");
+    saveSession(result.token, result.user);
+  }
+
+  // Updates the 2FA state after enabling/disabling it from the profile page
+  function setTwoFactorEnabled(enabled: boolean) {
+    setUser((current) => (current ? { ...current, twoFactorEnabled: enabled } : current));
   }
 
   async function register(email: string, username: string, password: string) {
@@ -124,7 +156,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, verify2fa, setTwoFactorEnabled, register, logout, updateProfile }}
+    >
       {children}
     </AuthContext.Provider>
   );

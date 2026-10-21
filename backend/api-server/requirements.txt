@@ -21,3 +21,6 @@ python-jose[cryptography]
 passlib[bcrypt]
 bcrypt<4.1
 email-validator
+
+#2FactorAuth
+pyotp
