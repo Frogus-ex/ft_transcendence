@@ -1,11 +1,11 @@
-export type Timeframe = "1m" | "5m" | "1h" | "1D" | "7D";
+export type Timeframe = "1m" | "5m" | "1h";
 
 type TimeframeSelectorProps = {
   value: Timeframe;
   onChange: (value: Timeframe) => void;
 };
 
-const timeframes: Timeframe[] = ["1m", "5m", "1h", "1D"];
+const timeframes: Timeframe[] = ["1m", "5m", "1h"];
 
 /**
  * TimeframeSelector — "composant contrôlé" : il ne gère aucun state à lui,
