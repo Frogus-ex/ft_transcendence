@@ -48,6 +48,13 @@ class UserOut(BaseModel):
 	avatarUrl: str | None = Field(default=None, validation_alias="avatar_url")
 	twoFactorEnabled: bool = Field(validation_alias="two_fa_enabled")
 
+	@field_validator("avatarUrl", mode="before")
+	@classmethod
+	def resolve_default_avatar(cls, value: str | None) -> str:
+		if value in (None, "https://i.pravatar.cc/150", "../images/Default_pfp.jpg"):
+			return "/images/Default_pfp.jpg"
+		return value
+
 class UserMeOut(UserOut):
 	email: str
 	createdAt: datetime = Field(validation_alias="created_at")
@@ -111,7 +118,7 @@ async def register(db: db_dependency,
 		email=create_user_request.email.strip().lower(),
 		username=create_user_request.username.strip(),
 		password_hash=password_hash,
-		avatar_url="https://i.pravatar.cc/150",
+		avatar_url="/images/Default_pfp.jpg",
 	)
 	db.add(user)
 	try:

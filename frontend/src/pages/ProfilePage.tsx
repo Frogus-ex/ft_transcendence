@@ -56,7 +56,7 @@ function ProfilePageContent() {
       <Card padding="large" className="mb-6">
         <div className="flex items-center gap-4">
           <Avatar
-            src={user.avatarUrl ?? "https://i.pravatar.cc/150"}
+            src={user.avatarUrl ?? "/images/Default_pfp.jpg"}
             alt="Profile photo"
             size="large"
           />
