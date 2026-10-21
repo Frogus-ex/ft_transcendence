@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export async function apiDownload(path: string, fallbackFilename: string, init?: RequestInit): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${path}`, init);
 
@@ -33,4 +34,20 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   }
 
   return await response.json();
+}
+
+export async function apiUpload(
+  path: string,
+  body: string,
+  init?: RequestInit
+): Promise<{ status: number; data: unknown }> {
+  const response = await fetch(`${API_BASE_URL}${path}`, { method: "POST", body, ...init });
+
+  let data: unknown = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  return { status: response.status, data };
 }
