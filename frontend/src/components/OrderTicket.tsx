@@ -254,6 +254,9 @@ function OrderTicket() {
         </div>
       </div>
 
+      {confirmation && <Alert variant="success">{confirmation}</Alert>}
+      {error && <Alert variant="error">{error}</Alert>}
+
       {/* Zone 8 — Soumission */}
       <Button
         variant={form.side === "buy" ? "primary" : "danger"}
