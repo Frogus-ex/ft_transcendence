@@ -1,4 +1,4 @@
-# API Server Backend
+# API Server Backend (Data Exposure)
 
 This service acts as the interface between the ingestion layer and the frontend. It provides the market data needed by the user interface through both HTTP endpoints and real-time WebSocket streaming, while keeping the presentation layer decoupled from the underlying Redis and PostgreSQL systems.
 
@@ -92,7 +92,7 @@ The API server behaves like a presentation layer for the market data platform:
 
 This design makes the service easy to manage globally: it keeps the live pipeline fast, the historical data accessible, and the frontend independent from the underlying storage and streaming systems.
 
-## Debug and testing
+## Troubleshooting
 
 ### WebSocket validation
 
@@ -145,7 +145,7 @@ The candle endpoint is used to return the OHLC time series for the charting UI. 
 Open the API documentation:
 
 ```text
-http://localhost:8000/docs
+https://localhost:8443/api/docs#/
 ```
 
 Then call `GET /api/markets{symbol}/candles` to check the OHLC of the currency of your choice.

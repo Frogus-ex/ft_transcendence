@@ -130,10 +130,11 @@ The project provides separate PostgreSQL users for different responsibilities:
 | User | Role | Purpose | Typical privileges |
 | --- | --- | --- | --- |
 | `transcendence_user` | Administrator | Initializes or changes the database schema | All privileges |
+| `app_user` | Application | Reads and writes data for the API server | `SELECT`, `INSERT`, `UPDATE`, `DELETE` |
 | `ingest_user` | Ingestion | Writes data from the pipeline | `INSERT`, `SELECT`, `UPDATE` |
 | `reader_user` | Read-only | Reads data | `SELECT` |
 
-Do not use `transcendence_user` for normal application work. Use `reader_user` for investigations and queries, and reserve `ingest_user` for ingestion operations.
+Do not use `transcendence_user` for normal application work. Use `app_user` for API server operations, `ingest_user` for ingestion, and `reader_user` for investigations and queries.
 
 ### Accessing PostgreSQL
 
