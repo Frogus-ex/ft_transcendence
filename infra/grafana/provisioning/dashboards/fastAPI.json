@@ -2,7 +2,7 @@
   "title": "API Server (FastAPI) - ft_transcendence",
   "uid": "api-ft-transcendence",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
@@ -14,8 +14,17 @@
       "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "sum(rate(http_requests_total[1m]))", "refId": "A" }
-      ]
+        { "expr": "sum(rate(http_requests_total{job=\"fastAPI\"}[1m]))", "refId": "A" }
+      ],
+      "options": { "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "min": 0,
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        }
+      }
     },
     {
       "id": 2,
@@ -25,13 +34,16 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "100 * sum(rate(http_requests_total{status=\"5xx\"}[5m])) / sum(rate(http_requests_total[5m]))",
+          "expr": "100 * (sum(rate(http_requests_total{job=\"fastAPI\",status=\"5xx\"}[5m])) or vector(0)) / sum(rate(http_requests_total{job=\"fastAPI\"}[5m]))",
           "refId": "A"
         }
       ],
+      "options": { "graphMode": "none" },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
+          "decimals": 2,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -51,11 +63,26 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) * 1000",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_highr_seconds_bucket{job=\"fastAPI\"}[5m])) by (le)) * 1000",
           "refId": "A"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "ms" } }
+      "options": { "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 200 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      }
     },
     {
       "id": 4,
@@ -64,8 +91,17 @@
       "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "sum(increase(http_requests_total[1h]))", "refId": "A" }
-      ]
+        { "expr": "round(sum(increase(http_requests_total{job=\"fastAPI\"}[1h])))", "refId": "A" }
+      ],
+      "options": { "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "color": { "mode": "fixed", "fixedColor": "green" }
+        }
+      }
     },
     {
       "id": 5,
@@ -74,8 +110,20 @@
       "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "sum(rate(http_requests_total[1m])) by (handler)", "legendFormat": "{{handler}}", "refId": "A" }
-      ]
+        {
+          "expr": "sum(rate(http_requests_total{job=\"fastAPI\"}[1m])) by (handler)",
+          "legendFormat": "{{handler}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "min": 0,
+          "custom": { "spanNulls": true }
+        }
+      }
     },
     {
       "id": 6,
@@ -84,8 +132,20 @@
       "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
-        { "expr": "sum(rate(http_requests_total[1m])) by (status)", "legendFormat": "{{status}}", "refId": "A" }
-      ]
+        {
+          "expr": "sum(rate(http_requests_total{job=\"fastAPI\"}[1m])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "min": 0,
+          "custom": { "spanNulls": true }
+        }
+      }
     }
   ]
 }
