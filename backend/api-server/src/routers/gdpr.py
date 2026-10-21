@@ -1,10 +1,10 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt, JWTError
 from sqlalchemy import select
@@ -14,6 +14,7 @@ from starlette import status
 from config import JWT_SECRET
 from database.models import Users, Portfolio, Order
 from database.orm_db import get_async_session
+from mailer import send_email
 
 
 logger = logging.getLogger(__name__)
@@ -39,10 +40,15 @@ def default_json(obj):
 	raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
+def utc_now_label() -> str:
+	return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+
 @router.get("/export")
 async def export_my_data(
 	credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
 	db: db_dependency,
+	background_tasks: BackgroundTasks,
 ):
 	"""Exports every piece of personal data the platform holds about the caller (GDPR)."""
 
@@ -84,6 +90,18 @@ async def export_my_data(
 		],
 	}
 
+	background_tasks.add_task(
+		send_email,
+		user.email,
+		"Your ft_transcendence data export",
+		f"Hello {user.username},\n\n"
+		f"On {utc_now_label()}, a copy of your personal data (profile, portfolio and order history) "
+		"was exported from your ft_transcendence account.\n\n"
+		"If you did not make this request, please contact us through the project repository "
+		"(github.com/Frogus-ex/ft_transcendence).\n\n"
+		"The ft_transcendence team (42 Paris educational project)\n",
+	)
+
 	return Response(
 		content=json.dumps(data, default=default_json, indent=2),
 		media_type="application/json",
@@ -95,6 +113,7 @@ async def export_my_data(
 async def delete_my_account(
 	credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
 	db: db_dependency,
+	background_tasks: BackgroundTasks,
 ):
 	"""Permanently deletes the caller's account and all associated data (GDPR right to erasure)."""
 
@@ -104,5 +123,18 @@ async def delete_my_account(
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
+	email, username = user.email, user.username
 	await db.delete(user)
 	await db.commit()
+
+	background_tasks.add_task(
+		send_email,
+		email,
+		"Your ft_transcendence account has been deleted",
+		f"Hello {username},\n\n"
+		f"On {utc_now_label()}, your account and all associated data (profile, portfolio, order history "
+		"and API key) were permanently deleted. This cannot be undone.\n\n"
+		"If you did not make this request, please contact us through the project repository "
+		"(github.com/Frogus-ex/ft_transcendence).\n\n"
+		"The ft_transcendence team (42 Paris educational project)\n",
+	)

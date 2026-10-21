@@ -4,12 +4,14 @@ import HomePage from "../pages/HomePage";
 import LoginPage from "../pages/LoginPage";
 import MarketsPage from "../pages/MarketsPage";
 import ContactsPage from "../pages/ContactsPage";
+import FriendProfilePage from "../pages/FriendProfilePage";
 import ProfilePage from "../pages/ProfilePage";
 import NewUserPage from "../pages/NewUserPage";
 import GdprPage from "../pages/GdprPage";
 import PrivateRoute from "../components/PrivateRoute";
 import PrivacyPage from "../pages/PrivacyPage";
 import TermsPage from "../pages/TermsPage";
+import TwoFactorPage from "../pages/TwoFactorPage";
 
 const router = createBrowserRouter([
   {
@@ -27,11 +29,21 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
+      {
+        path: "contacts/:friendId",
+        element: (
+          <PrivateRoute>
+            <FriendProfilePage />
+          </PrivateRoute>
+        ),
+      },
       { path: "markets", element: <MarketsPage /> },
-	  { path: "privacy", element: <PrivacyPage /> },
+	    { path: "privacy", element: <PrivacyPage /> },
       { path: "terms", element: <TermsPage /> },
       { path: "gdpr", element: <GdprPage /> },
-	  { path: "create_user", element: <NewUserPage /> },
+	    { path: "create_user", element: <NewUserPage /> },
+      { path: "login", element: <LoginPage /> },
+      { path: "2fa", element: <TwoFactorPage /> },
     ],
   },
 ]);

@@ -49,25 +49,31 @@ type PortfolioContextValue = {
 
 const PortfolioContext = createContext<PortfolioContextValue | undefined>(undefined);
 
-export function PortfolioProvider({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+export function PortfolioProvider({ children, userId }: { children: React.ReactNode; userId?: number }) {
+  const { token, user } = useAuth();
   const { watchlist } = useMarket();
   const [rawPortfolio, setRawPortfolio] = useState<ApiPortfolio | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const targetUserId = userId ?? user?.id;
 
-    const refresh = useCallback(async () => {
-    if (!token) {
+  const refresh = useCallback(async () => {
+    if (!token || !targetUserId) {
       setRawPortfolio(null);
       setOrders([]);
       setIsLoading(false);
       return;
     }
+
+    const isCurrentUser = user?.id === targetUserId;
+    const portfolioPath = isCurrentUser ? "/portfolio" : `/friends/${targetUserId}/portfolio`;
+    const ordersPath = isCurrentUser ? "/orders" : `/friends/${targetUserId}/orders`;
+
     setIsLoading(true);
     try {
       const [portfolioData, ordersData] = await Promise.all([
-        apiFetch<ApiPortfolio>("/portfolio", { headers: { Authorization: `Bearer ${token}` } }),
-        apiFetch<Order[]>("/orders", { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch<ApiPortfolio>(portfolioPath, { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch<Order[]>(ordersPath, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       // Les champs Decimal (balance, quantity, price, realized_pnl) arrivent en
       // string depuis le backend (Pydantic sérialise Decimal en texte pour
@@ -87,7 +93,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, targetUserId, user?.id]);
 
   useEffect(() => {
     refresh();

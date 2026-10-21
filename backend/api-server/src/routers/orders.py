@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 from datetime import datetime
 import redis.asyncio as aredis
+from auth_deps import get_current_user_id
 
 from config import JWT_SECRET
 from database.models import Users, Portfolio, Order
@@ -66,8 +67,7 @@ async def get_current_price(symbol: str, r: aredis.Redis) -> Decimal:
 async def place_order(
 	request: Request,
 	order_request: OrderRequest,
-	credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
-	db: db_dependency,
+	user_id: Annotated[int, Depends(get_current_user_id)],	db: db_dependency,
 	r: aredis.Redis = Depends(get_redis),
 ):
 	"""Places a market order and updates the user's portfolio accordingly.
@@ -79,9 +79,7 @@ async def place_order(
 			detail="Only market orders are supported for now.",
 		)
 
-	user_id = decode_user_id(credentials)
-
-	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
+	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id).with_for_update())
 	portfolio = result.scalar_one_or_none()
 	if portfolio is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found.")
@@ -147,10 +145,8 @@ async def place_order(
 
 @router.get("", response_model=list[OrderOut])
 async def list_orders(
-	credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
-	db: db_dependency,
+	user_id: Annotated[int, Depends(get_current_user_id)],	db: db_dependency,
 ):
-	user_id = decode_user_id(credentials)
 	result = await db.execute(
 		select(Order).where(Order.user_id == user_id).order_by(Order.created_at.desc()).limit(200)
 	)

@@ -98,3 +98,12 @@ DAY_MS = 24 * 60 * 60 * 1000
 HOURS_MS = 60 * 60 * 1000
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT"]
+
+
+# SMTP (confirmation emails for GDPR operations). Emails are skipped when SMTP_HOST is empty.
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "")
+SMTP_STARTTLS = os.getenv("SMTP_STARTTLS", "true").lower() == "true"

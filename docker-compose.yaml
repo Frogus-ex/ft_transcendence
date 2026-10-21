@@ -164,8 +164,6 @@ services:
       dockerfile: Dockerfile
     container_name: transcendence_api_server
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     env_file:
       - .env
     environment:
@@ -174,6 +172,7 @@ services:
       POSTGRES_APP_USER: ${POSTGRES_APP_USER}
       POSTGRES_APP_PASSWORD_FILE: /run/secrets/postgres_app_password
       JWT_SECRET_FILE: /run/secrets/jwt_secret
+      VITE_API_BASE_URL: /api
       OAUTH_SESSION_SECRET_FILE: /run/secrets/oauth_session_secret
 
       OAUTH_42_ID: ${OAUTH_42_ID}

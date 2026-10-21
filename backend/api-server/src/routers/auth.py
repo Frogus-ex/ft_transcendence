@@ -1,8 +1,9 @@
 import json
+import pyotp
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
@@ -13,6 +14,7 @@ from jose import jwt, JWTError
 from typing import Annotated, TypeAlias
 from passlib.context import CryptContext
 from utils import limiter
+from auth_deps import get_current_user_id
 
 from starlette import status
 from sqlalchemy import select
@@ -66,8 +68,8 @@ class RegisterResponse(BaseModel):
 
 
 class LoginRequest(BaseModel):
-	email: str
-	password:str
+	email: EmailStr
+	password: str
 
 
 class UserOut(BaseModel):
@@ -75,6 +77,7 @@ class UserOut(BaseModel):
 	id: int
 	username: str
 	avatarUrl: str | None = Field(default=None, validation_alias="avatar_url")
+	twoFactorEnabled: bool = Field(validation_alias="two_fa_enabled")
 
 
 class UserMeOut(UserOut):
@@ -88,8 +91,23 @@ class UpdateProfileRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-	token: str
-	user: UserOut
+	token: str | None = None
+	user: UserOut | None = None
+	requires2fa: bool = False
+	tempToken: str | None = None
+
+
+class TwoFACode(BaseModel):
+	code: str = Field(pattern=r"^\d{6}$")
+
+
+class TwoFAVerifyRequest(TwoFACode):
+	tempToken: str
+
+
+class TwoFASetupResponse(BaseModel):
+	otpauthUrl: str
+	secret: str
 
 
 class PortfolioOut(BaseModel):
@@ -112,7 +130,7 @@ class PortfolioOut(BaseModel):
 			if isinstance(parsed, list):
 				return parsed
 			if isinstance(parsed, dict):
-				return [parsed]
+				return [parsed] if parsed else []
 			return []
 		return value
 
@@ -163,9 +181,16 @@ async def authenticate_user(email: str, password:str, db):
 	return user if ok else None
 
 
-def create_access_token(email: str, id: int, expires_delta: timedelta):
-	encode = {"sub": str(id), "email": email, "exp": datetime.now(timezone.utc) + expires_delta,}
+def create_access_token(email: str, id: int, expires_delta: timedelta, token_type: str = "access"):
+	encode = {"sub": str(id), "email": email, "type": token_type, "exp": datetime.now(timezone.utc) + expires_delta,}
 	return jwt.encode(encode, JWT_SECRET, algorithm=ALGORITHM)
+
+
+async def _get_user_or_401(db: AsyncSession, user_id: int) -> Users:
+	user = await db.get(Users, user_id)
+	if user is None:
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
+	return user
 
 
 @router.post("/auth/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
@@ -174,6 +199,103 @@ async def login(request: Request, req: LoginRequest, db: db_dependency):
 	user = await authenticate_user(req.email, req.password, db)
 	if user is None:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
+	if user.two_fa_enabled:
+		temp_token = create_access_token(user.email, user.id, timedelta(minutes=5), token_type="2fa_pending")
+		return {"requires2fa": True, "tempToken": temp_token}
+	token = create_access_token(user.email, user.id, timedelta(minutes=20))
+	return {"token": token, "user": user}
+
+
+# Request authorization header, 
+# Response { id, username, email, avatarUrl, createdAt }
+@router.get("/users/me", response_model=UserMeOut)
+async def profile(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
+	result = await db.execute(select(Users).where(Users.id == user_id))
+	user = result.scalar_one_or_none()
+	if user is None:
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
+	return user
+
+
+@router.put("/users/me", response_model=UserMeOut)
+@limiter.limit("10/minute")
+async def update_profile(
+	request: Request,
+	update: UpdateProfileRequest,
+	user_id: Annotated[int, Depends(get_current_user_id)],
+	db: db_dependency,
+):
+	result = await db.execute(select(Users).where(Users.id == user_id))
+	user = result.scalar_one_or_none()
+	if user is None:
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
+
+	user.username = update.username
+	try:
+		await db.commit()
+	except IntegrityError:
+		await db.rollback()
+		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already in use")
+	await db.refresh(user)
+	return user
+
+
+@router.get("/portfolio", response_model=PortfolioOut)
+async def get_portfolio(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
+	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user_id))
+	portfolio = result.scalar_one_or_none()
+	if portfolio is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found.")
+	return portfolio
+
+@router.post("/auth/2fa/setup", response_model=TwoFASetupResponse)
+async def setup_2fa(user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
+	user = await _get_user_or_401(db, user_id)
+	if user.two_fa_enabled:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="2FA already enabled.")
+	secret = pyotp.random_base32()
+	url = pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name="ft_transcendence")
+	user.totp_secret = secret
+	await db.commit()
+	return {"otpauthUrl": url, "secret": secret}
+
+
+@router.post("/auth/2fa/enable")
+@limiter.limit("5/minute")
+async def enable_2fa(request: Request, body: TwoFACode, user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
+	user = await _get_user_or_401(db, user_id)
+	if not user.totp_secret or not pyotp.TOTP(user.totp_secret).verify(body.code, valid_window=1):
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid code.")
+	user.two_fa_enabled = True
+	await db.commit()
+	return {"twoFactorEnabled": True}
+
+
+@router.post("/auth/2fa/disable")
+@limiter.limit("5/minute")
+async def disable_2fa(request: Request, body: TwoFACode, user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
+	user = await _get_user_or_401(db, user_id)
+	if not user.two_fa_enabled or not pyotp.TOTP(user.totp_secret).verify(body.code, valid_window=1):
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid code.")
+	user.two_fa_enabled = False
+	user.totp_secret = None
+	await db.commit()
+	return {"twoFactorEnabled": False}
+
+
+@router.post("/auth/2fa/verify", response_model=LoginResponse)
+@limiter.limit("5/minute")
+async def verify_2fa(request: Request, body: TwoFAVerifyRequest, db: db_dependency):
+	try:
+		payload = jwt.decode(body.tempToken, JWT_SECRET, algorithms=[ALGORITHM])
+		if payload.get("type") != "2fa_pending":
+			raise ValueError("wrong token type")
+		user_id = int(payload["sub"])
+	except (JWTError, KeyError, ValueError):
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired, please log in again.")
+	user = await _get_user_or_401(db, user_id)
+	if not user.two_fa_enabled or not pyotp.TOTP(user.totp_secret).verify(body.code, valid_window=1):
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid code.")
 	token = create_access_token(user.email, user.id, timedelta(minutes=20))
 	return {"token": token, "user": user}
 
@@ -226,37 +348,3 @@ async def school_callback(request: Request, db: db_dependency):
 
 	return RedirectResponse(f"{FRONTEND_URL}/oauth-callback#token={token}",
 		                    status_code=status.HTTP_302_FOUND)
-
-
-async def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
-                           db: db_dependency) -> Users:
-	try:
-		payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
-		user_id=int(payload["sub"])
-	except (JWTError, KeyError, ValueError):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
-	
-	result = await db.execute(select(Users).where(Users.id == user_id))
-	user = result.scalar_one_or_none()
-	if user is None:
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user.")
-	return user
-
-
-CurrentUser: TypeAlias = Annotated[Users, Depends(get_current_user)]
-
-
-# Request authorization header, 
-# Response { id, username, email, avatarUrl, createdAt }
-@router.get("/users/me", response_model=UserMeOut)
-async def profile(user: CurrentUser):
-	return user
-
-
-@router.get("/portfolio", response_model=PortfolioOut)
-async def get_portfolio(user: CurrentUser, db: db_dependency):
-	result = await db.execute(select(Portfolio).where(Portfolio.user_id == user.id))
-	portfolio = result.scalar_one_or_none()
-	if portfolio is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio not found.")
-	return portfolio

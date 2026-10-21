@@ -4,8 +4,7 @@ FROM node:22-alpine AS base
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install && \
-    npm install lightweight-charts
+RUN npm ci --no-audit --no-fund
 
 COPY . .
 

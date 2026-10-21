@@ -25,3 +25,6 @@ email-validator
 # OAuth
 itsdangerous
 Authlib
+
+#2FactorAuth
+pyotp
