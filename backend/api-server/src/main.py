@@ -18,7 +18,7 @@ from config import REDIS_PORT, REDIS_HOST, REDIS_PASSWORD
 from urllib.parse import quote_plus
 from routers import markets, websockets, auth, orders, gdpr, keys
 from utils import manager, limiter
-from export import exporter
+from export import exporter, importer
 from database.models import Users, Portfolio, Order, ApiKey
 from database.orm_db import engine, Base
 
@@ -141,3 +141,4 @@ app.include_router(auth.router)
 app.include_router(orders.router)
 app.include_router(gdpr.router)
 app.include_router(keys.router)
+app.include_router(importer.router)

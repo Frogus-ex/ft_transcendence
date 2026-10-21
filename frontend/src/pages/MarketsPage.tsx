@@ -4,6 +4,7 @@ import OrderTicket from "../components/OrderTicket";
 import PositionsPanel from "../components/PositionsPanel";
 import AnalyticsPanel from "../components/AnalyticsPanel";
 import ExportPanel from "../components/ExportPanel";
+import ImportPanel from "../components/ImportPanel";
 import { MarketProvider } from "../context/MarketContext";
 import { PortfolioProvider } from "../context/PortfolioContext";
 import { useAuth } from "../context/AuthContext";
@@ -51,8 +52,9 @@ function MarketsPage() {
             <AnalyticsPanel />
           </div>
 
-          <div className="col-start-3 row-start-3">
+          <div className="col-start-3 row-start-3 flex flex-col gap-4">
             <ExportPanel />
+            <ImportPanel />
           </div>
         </div>
       </PortfolioProvider>
