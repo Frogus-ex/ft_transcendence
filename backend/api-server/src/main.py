@@ -1,10 +1,12 @@
 import asyncio
 import logging
 import json
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 import redis.asyncio as aredis
 from slowapi import _rate_limit_exceeded_handler
@@ -119,6 +121,11 @@ app = FastAPI(
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
+)
+app.mount(
+    "/images",
+    StaticFiles(directory=Path(__file__).resolve().parent.parent / "images"),
+    name="images",
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
