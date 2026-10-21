@@ -4,3 +4,6 @@ secrets/*.txt
 secrets/*.json
 !secrets/*.example
 .make.log
+node_modules/
+__pycache__/
+*.pyc

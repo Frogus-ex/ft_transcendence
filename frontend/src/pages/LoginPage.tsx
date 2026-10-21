@@ -6,6 +6,7 @@ import Button from "../components/Button";
 import Label from "../components/Label";
 import { useAuth } from "../context/AuthContext";
 
+
 function LoginPage() {
 	const { login } = useAuth();
 	const userRef = useRef<HTMLInputElement>(null);
@@ -29,11 +30,15 @@ function LoginPage() {
   event.preventDefault();
 
   try {
-    await login(email, pwd);
-    setEmail("");
-    setPwd("");
-    setSuccess(true);
-    navigate("/profile");
+  const result = await login(email, pwd);
+  if (result?.requires2fa) {
+    navigate("/2fa", { state: { tempToken: result.tempToken } });
+    return;
+  }
+  setEmail("");
+  setPwd("");
+  setSuccess(true);
+  navigate("/profile");
   } catch (err) {
     if (err instanceof TypeError) {
       setErrMsg("No Server Response");

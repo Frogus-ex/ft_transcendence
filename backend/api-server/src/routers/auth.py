@@ -46,11 +46,11 @@ class UserOut(BaseModel):
 	id: int
 	username: str
 	avatarUrl: str | None = Field(default=None, validation_alias="avatar_url")
+	twoFactorEnabled: bool = Field(validation_alias="two_fa_enabled")
 
 class UserMeOut(UserOut):
 	email: str
 	createdAt: datetime = Field(validation_alias="created_at")
-	twoFactorEnabled: bool = Field(validation_alias="two_fa_enabled")
 
 class UpdateProfileRequest(BaseModel):
 	model_config = ConfigDict(str_strip_whitespace=True)
@@ -207,7 +207,7 @@ async def setup_2fa(user_id: Annotated[int, Depends(get_current_user_id)], db: d
 	return {"otpauthUrl": url, "secret": secret}
 
 
-@router.post("/auth/2fa/enable", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/auth/2fa/enable")
 @limiter.limit("5/minute")
 async def enable_2fa(request: Request, body: TwoFACode, user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
 	user = await _get_user_or_401(db, user_id)
@@ -215,9 +215,10 @@ async def enable_2fa(request: Request, body: TwoFACode, user_id: Annotated[int, 
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid code.")
 	user.two_fa_enabled = True
 	await db.commit()
+	return {"twoFactorEnabled": True}
 
 
-@router.post("/auth/2fa/disable", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/auth/2fa/disable")
 @limiter.limit("5/minute")
 async def disable_2fa(request: Request, body: TwoFACode, user_id: Annotated[int, Depends(get_current_user_id)], db: db_dependency):
 	user = await _get_user_or_401(db, user_id)
@@ -226,6 +227,7 @@ async def disable_2fa(request: Request, body: TwoFACode, user_id: Annotated[int,
 	user.two_fa_enabled = False
 	user.totp_secret = None
 	await db.commit()
+	return {"twoFactorEnabled": False}
 
 
 @router.post("/auth/2fa/verify", response_model=LoginResponse)
