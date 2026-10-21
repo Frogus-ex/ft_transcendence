@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, func, case, Select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
@@ -19,6 +19,7 @@ from database.orm_db import get_async_session
 router = APIRouter(prefix="/api", tags=["friends"])
 ALGORITHM = "HS256"
 bearer_scheme = HTTPBearer()
+FriendshipStatus = Literal["none", "friends", "request_sent", "request_received"]
 
 
 def get_user_payload(token: str) -> int:
@@ -78,6 +79,16 @@ class MessageOut(BaseModel):
     content: str
     createdAt: datetime = Field(validation_alias="created_at")
     readAt: datetime | None = Field(default=None, validation_alias="read_at")
+
+class UserSearchResult(BaseModel):
+	id: int
+	username: str
+	avatarUrl: str | None = None
+	friendshipStatus: FriendshipStatus
+ 
+ 
+class UserSearchResponse(BaseModel):
+	users: list[UserSearchResult]
 
 
 @router.get("/friends")
@@ -374,3 +385,58 @@ async def send_chat_message(
         "createdAt": message.created_at,
         "readAt": message.read_at,
     }
+
+
+ 
+ 
+def build_search_query(me: int, term: str, limit: int) -> Select:
+	"""Users whose username contains `term`, each with their relationship to user `me`."""
+	# A friendship row stores the pair sorted (low < high), so check both orders
+	pair_with_me = or_(
+		and_(Friendships.user_low_id == me, Friendships.user_high_id == Users.id),
+		and_(Friendships.user_low_id == Users.id, Friendships.user_high_id == me),
+	)
+	friendship_status = case(
+		(Friendships.id.is_(None), "none"),
+		(Friendships.status == "accepted", "friends"),
+		(Friendships.requester_id == me, "request_sent"),
+		else_="request_received",
+	).label("friendship_status")
+	# Usernames that START with the term come first, then alphabetical
+	starts_with = case((Users.username.istartswith(term, autoescape=True), 0), else_=1)
+ 
+	return (
+		select(Users.id, Users.username, Users.avatar_url, friendship_status)
+		.outerjoin(Friendships, pair_with_me)
+		# autoescape: a user typing % or _ searches for those characters, not a wildcard
+		.where(Users.id != me, Users.username.icontains(term, autoescape=True))
+		.order_by(starts_with, func.lower(Users.username))
+		.limit(limit)
+	)
+ 
+ 
+# Request:  Authorization: Bearer <token>, query ?search=<2-50 chars>&limit=<1-20, default 10>
+# Response: { users: [{ id, username, avatarUrl, friendshipStatus }] }
+@router.get("/users", response_model=UserSearchResponse)
+async def search_users(
+	current_user: Users = Depends(get_current_user),
+	db: AsyncSession = Depends(get_async_session),
+	search: str = Query(min_length=2, max_length=50),
+	limit: Annotated[int, Query(ge=1, le=20)] = 10,
+):
+	term = search.strip()
+	if len(term) < 2:
+		raise HTTPException(status_code=422, detail="search must be at least 2 characters.")
+ 
+	result = await db.execute(build_search_query(current_user.id, term, limit))
+	return {
+		"users": [
+			{
+				"id": row.id,
+				"username": row.username,
+				"avatarUrl": row.avatar_url,
+				"friendshipStatus": row.friendship_status,
+			}
+			for row in result.all()
+		]
+	}
