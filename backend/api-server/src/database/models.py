@@ -61,3 +61,12 @@ class Order(Base):
 	__table_args__ = (
 		Index("idx_orders_user_created", "user_id", created_at.desc()),
 	)
+
+class ApiKey(Base):
+	__tablename__ = "api_keys"
+
+	id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+	key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+	key_prefix: Mapped[str] = mapped_column(String(12), nullable=False)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
