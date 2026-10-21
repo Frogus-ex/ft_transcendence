@@ -11,6 +11,7 @@ import GdprPage from "../pages/GdprPage";
 import PrivateRoute from "../components/PrivateRoute";
 import PrivacyPage from "../pages/PrivacyPage";
 import TermsPage from "../pages/TermsPage";
+import TwoFactorPage from "../pages/TwoFactorPage";
 
 const router = createBrowserRouter([
   {
@@ -37,10 +38,12 @@ const router = createBrowserRouter([
         ),
       },
       { path: "markets", element: <MarketsPage /> },
-	  { path: "privacy", element: <PrivacyPage /> },
+	    { path: "privacy", element: <PrivacyPage /> },
       { path: "terms", element: <TermsPage /> },
       { path: "gdpr", element: <GdprPage /> },
-	  { path: "create_user", element: <NewUserPage /> },
+	    { path: "create_user", element: <NewUserPage /> },
+      { path: "login", element: <LoginPage /> },
+      { path: "2fa", element: <TwoFactorPage /> },
     ],
   },
 ]);
