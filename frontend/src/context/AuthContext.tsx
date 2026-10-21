@@ -48,6 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function restoreSession() {
       const storedToken = localStorage.getItem("authToken");
+      // No token and no past session: nothing to restore, so no refresh request (avoids a 401 in the console).
+      if (!storedToken && !localStorage.getItem("hasSession")) {
+        setIsLoading(false);
+        return;
+      }
       try {
         const sessionToken = storedToken ?? await refreshAccessToken();
         const me = await apiFetch<User>("/users/me", {
@@ -57,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(me);
       } catch {
         localStorage.removeItem("authToken");
+        localStorage.removeItem("hasSession");
       }
       setIsLoading(false);
     }
@@ -82,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         console.error("Unable to refresh authentication session.", error);
         localStorage.removeItem("authToken");
+        localStorage.removeItem("hasSession");
         setToken(null);
         setUser(null);
       }
@@ -94,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Saves the session: used by the normal login AND by the 2FA verification
   function saveSession(newToken: string, newUser: User) {
     localStorage.setItem("authToken", newToken);
+    localStorage.setItem("hasSession", "1");
     setToken(newToken);
     setUser(newUser);
   }
@@ -147,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function logout() {
     localStorage.removeItem("authToken");
+    localStorage.removeItem("hasSession");
     setToken(null);
     setUser(null);
     void apiFetch<void>("/auth/logout", { method: "POST" }).catch((error: unknown) => {
