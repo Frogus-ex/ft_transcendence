@@ -310,7 +310,6 @@ Each Major module is worth 2 points and each Minor module 1 point (14 points req
 - Container infrastructure, HTTPS reverse proxy, Makefile and secrets
 - Prometheus, Grafana dashboards and alert rules
 
-> TODO (tlorette): complete with anything missing.
 
 ### Aautret:
 - Market dashboard (watchlist, charts, timeframes, date-range filter, responsive layout)
