@@ -4,6 +4,7 @@ MAKEFLAGS += --no-print-directory
 NAME    = ft_transcendence
 COMPOSE = podman-compose
 LOG     = .make.log
+.DEFAULT_GOAL := all
 
 COLOUR_GREEN  = $(shell tput setaf 2 2>/dev/null)
 COLOUR_RED    = $(shell tput setaf 1 2>/dev/null)
