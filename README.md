@@ -324,3 +324,15 @@ Each Major module is worth 2 points and each Minor module 1 point (14 points req
 - Layout, navigation and registration / login pages
 
 
+## Demonstrating the API rate limiting
+
+Every endpoint is rate limited per client IP with SlowAPI (default **100 requests/minute**). Sensitive endpoints have stricter limits:
+
+When a limit is exceeded the API answers `429 Too Many Requests`. To see it live (no account needed), send 7 login attempts in a row: the first 5 return `401`, the next ones return `429`.
+
+```bash
+for i in $(seq 1 7); do
+  curl -sk -o /dev/null -w "%{http_code}\n" -X POST https://localhost:8443/api/auth/login \
+    -H "Content-Type: application/json" -d '{"email":"demo@example.com","password":"wrong"}'
+done
+```
