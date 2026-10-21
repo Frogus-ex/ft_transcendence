@@ -37,8 +37,8 @@ class RegisterResponse(BaseModel):
 	userId: int
 
 class LoginRequest(BaseModel):
-	email: str
-	password:str
+	email: EmailStr
+	password: str
 
 class UserOut(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
