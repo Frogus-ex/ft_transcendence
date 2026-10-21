@@ -66,6 +66,11 @@ function OrderTicket() {
       const limitPriceNumber = parseFloat(form.limitPrice);
       if (!Number.isFinite(limitPriceNumber) || limitPriceNumber <= 0) return false;
     }
+    const price =
+      form.orderType === "limit" && form.limitPrice
+        ? parseFloat(form.limitPrice)
+        : selectAsset?.lastPrice ?? 0;
+    if (form.side === "buy" && quantityNumber * price > balance) return false;
     return true;
   }
 
@@ -240,14 +245,14 @@ function OrderTicket() {
           <span>Coût estimé</span>
           <span className="text-gray-100">${estimatedCost.toFixed(2)}</span>
         </div>
+        {form.side === "buy" && estimatedCost > balance && (
+          <p className="text-red-400 text-sm">Solde insuffisant</p>
+        )}
         <div className="flex justify-between text-gray-400">
           <span>Solde disponible</span>
           <span className="text-gray-100">${balance.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
       </div>
-
-      {confirmation && <Alert variant="success">{confirmation}</Alert>}
-      {error && <Alert variant="error">{error}</Alert>}
 
       {/* Zone 8 — Soumission */}
       <Button
