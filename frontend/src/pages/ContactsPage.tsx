@@ -213,7 +213,7 @@ function ContactsPage() {
 	                        )
 	                      );
 	                    } catch (err) {
-	                      console.error("Error removing friend:", err);
+	                      //console.error("Error removing friend:", err);
 	                    }
 	                  }}
 	                >
@@ -274,7 +274,7 @@ function ContactsPage() {
                               prevRequests.filter((item) => item.requestId !== request.requestId)
                             );
                           } catch (err) {
-                            console.error("Error accepting friend request:", err);
+                            //console.error("Error accepting friend request:", err);
                           }
                         }}
                       >
@@ -296,7 +296,7 @@ function ContactsPage() {
                               prevRequests.filter((item) => item.requestId !== request.requestId)
                             );
                           } catch (err) {
-                            console.error("Error declining friend request:", err);
+                            //console.error("Error declining friend request:", err);
                           }
                         }}
                       >
@@ -408,7 +408,7 @@ function ContactsPage() {
                             )
                           );
                         } catch (err) {
-                          console.error("Error handling friend request:", err);
+                          //console.error("Error handling friend request:", err);
                         }
                       }}
                     >
@@ -436,7 +436,7 @@ function ContactsPage() {
                             )
                           );
                         } catch (err) {
-                          console.error("Error declining friend request:", err);
+                          //console.error("Error declining friend request:", err);
                         }
                       }}
                     >
