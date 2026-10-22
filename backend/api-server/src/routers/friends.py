@@ -267,7 +267,7 @@ async def accept_friend_request(
     if friendship is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Friend request not found.")
 
-    if friendship.status:
+    if friendship.status == "friends":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Friend request already accepted.")
 
     recipient_id = friendship.user_low_id if friendship.user_low_id != friendship.requester_id else friendship.user_high_id
