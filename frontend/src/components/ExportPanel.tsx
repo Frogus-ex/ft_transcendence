@@ -8,6 +8,10 @@ type ExportFormat = "csv" | "json" | "xml";
 type ExportInterval = "1m" | "5m" | "1h" | "1d" | "1w";
 
 const intervals: ExportInterval[] = ["1m", "5m", "1h", "1d", "1w"];
+const MAX_CANDLES = 1000;
+
+const fieldLabelClass = "text-gray-400 text-xs";
+const fieldClass = "bg-black border border-gray-700 rounded-md text-sm text-gray-200 px-2 py-1";
 
 function ExportPanel() {
   const { selectedSymbol, watchlist } = useMarket();
@@ -31,7 +35,8 @@ function ExportPanel() {
         symbol: activeSymbol,
         format,
         interval,
-        limit: String(limit),
+        // Keeps the request inside the range accepted by the API (1 to 1000).
+        limit: String(Math.min(MAX_CANDLES, Math.max(1, Math.floor(limit) || 1))),
       });
       if (startDate) params.set("start", startDate);
       if (endDate) params.set("end", endDate);
@@ -48,10 +53,12 @@ function ExportPanel() {
     <div className="bg-[#050505] border border-[#1f1f1f] rounded-md p-4 flex flex-col gap-2 h-full">
       <span className="text-gray-500 text-xs uppercase tracking-wide mb-1">Export</span>
 
+      <label htmlFor="export-symbol" className={fieldLabelClass}>Symbol</label>
       <select
+        id="export-symbol"
         value={activeSymbol}
         onChange={(e) => setSymbol(e.target.value)}
-        className="bg-black border border-gray-700 rounded-md text-sm text-gray-200 px-2 py-1"
+        className={fieldClass}
       >
         {watchlist.map((asset) => (
           <option key={asset.symbol} value={asset.symbol}>
@@ -60,10 +67,12 @@ function ExportPanel() {
         ))}
       </select>
 
+      <label htmlFor="export-interval" className={fieldLabelClass}>Candle interval</label>
       <select
+        id="export-interval"
         value={interval}
         onChange={(e) => setInterval(e.target.value as ExportInterval)}
-        className="bg-black border border-gray-700 rounded-md text-sm text-gray-200 px-2 py-1"
+        className={fieldClass}
       >
         {intervals.map((tf) => (
           <option key={tf} value={tf}>
@@ -72,15 +81,20 @@ function ExportPanel() {
         ))}
       </select>
 
+      <label htmlFor="export-limit" className={fieldLabelClass}>
+        Number of candles (1 to {MAX_CANDLES})
+      </label>
       <input
+        id="export-limit"
         type="number"
         min={1}
-        max={1000}
+        max={MAX_CANDLES}
         value={limit}
         onChange={(e) => setLimit(Number(e.target.value))}
-        className="bg-black border border-gray-700 rounded-md text-sm text-gray-200 px-2 py-1"
+        className={fieldClass}
       />
 
+      <span className={fieldLabelClass}>Date range (optional)</span>
       <DateRangeFilter start={startDate} end={endDate} onChangeStart={setStartDate} onChangeEnd={setEndDate} />
 
       <Button variant="secondary" size="small" type="button" icon={false} shape="square" disabled={!activeSymbol || isExporting === "csv"} onClick={() => handleExport("csv")}>
